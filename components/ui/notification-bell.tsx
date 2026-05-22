@@ -22,7 +22,6 @@ export function NotificationBell() {
 
   useEffect(() => {
     loadNotifications()
-    // Only READ the current state — do NOT auto-request
     if (typeof window !== "undefined" && "Notification" in window) {
       setPermissionState(Notification.permission)
     }
@@ -40,7 +39,6 @@ export function NotificationBell() {
     }
   }
 
-  // Close on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -84,7 +82,6 @@ export function NotificationBell() {
               </button>
             </div>
           )}
-          {/* Browser blocked auto-prompt — guide user to address bar */}
           {permissionState === "default" && permAsked && (
             <div className="border-b border-amber-100 bg-amber-50 px-4 py-3">
               <p className="text-xs font-semibold text-amber-800">Trình duyệt đang chặn popup quyền.</p>
@@ -137,44 +134,69 @@ export function NotificationBell() {
                 <p className="text-sm">{t.notif_empty}</p>
               </div>
             ) : (
-              notifications.map(n => (
-                <a
-                  key={n.id}
-                  href={`/feed#post-${n.post_id}`}
-                  onClick={() => { markRead(n.id); setOpen(false) }}
-                  className={"flex items-start gap-3 px-4 py-3 transition hover:bg-slate-50 border-b border-slate-50 last:border-0 " + (!n.is_read ? "bg-blue-50/60" : "")}
-                >
-                  {/* Sender avatar */}
-                  <div className="mt-0.5 shrink-0">
-                    {n.from_avatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={n.from_avatar} alt={n.from_name} className="h-10 w-10 rounded-full object-cover shadow-sm" />
-                    ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-xs font-bold text-white shadow-sm">
-                        {n.from_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
+              notifications.map(n => {
+                const isFeedback = n.type === "feedback"
+                return (
+                  <a
+                    key={n.id}
+                    href={
+                     isFeedback
+                        ? `/dashboard?tab=feedback&feedbackId=${n.feedback_id || ""}`
+                         : `/feed#post-${n.post_id}`
+                              }
+                    onClick={() => { markRead(n.id); setOpen(false) }}
+                    className={"flex items-start gap-3 px-4 py-3 transition hover:bg-slate-50 border-b border-slate-50 last:border-0 " + (!n.is_read ? "bg-blue-50/60" : "")}
+                  >
+                    {/* Icon/avatar */}
+                    <div className="mt-0.5 shrink-0">
+                      {isFeedback ? (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-500 text-lg shadow-sm">
+                          💌
+                        </div>
+                      ) : n.from_avatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={n.from_avatar} alt={n.from_name} className="h-10 w-10 rounded-full object-cover shadow-sm" />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-xs font-bold text-white shadow-sm">
+                          {n.from_name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm leading-snug text-slate-800">
-                      <span className="font-bold">{n.from_name}</span>
-                      {" "}{t.notif_sent_you}{" "}
-                      <span className="font-bold text-amber-600">+{n.points} {t.notif_pts}</span>
-                    </p>
-                    {n.title && (
-                      <p className="mt-0.5 truncate text-xs text-slate-500">"{n.title}"</p>
-                    )}
-                    <p className="mt-1 text-[11px] text-slate-400">{timeAgo(n.created_at)}</p>
-                  </div>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {isFeedback ? (
+                        <>
+                          <p className="text-sm leading-snug text-slate-800">
+                            <span className="font-bold">Góp ý ẩn danh</span> — bạn vừa nhận được một góp ý mới
+                          </p>
+                          {n.title && (
+                            <p className="mt-0.5 truncate text-xs text-slate-500">"{n.title}"</p>
+                          )}
+                          <p className="mt-1 text-[11px] text-violet-500 font-semibold">Xem trong Dashboard → Góp ý</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm leading-snug text-slate-800">
+                            <span className="font-bold">{n.from_name}</span>
+                            {" "}{t.notif_sent_you}{" "}
+                            <span className="font-bold text-amber-600">+{n.points} {t.notif_pts}</span>
+                          </p>
+                          {n.title && (
+                            <p className="mt-0.5 truncate text-xs text-slate-500">"{n.title}"</p>
+                          )}
+                        </>
+                      )}
+                      <p className="mt-1 text-[11px] text-slate-400">{timeAgo(n.created_at)}</p>
+                    </div>
 
-                  {/* Unread dot */}
-                  {!n.is_read && (
-                    <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
-                  )}
-                </a>
-              ))
+                    {/* Unread dot */}
+                    {!n.is_read && (
+                      <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                    )}
+                  </a>
+                )
+              })
             )}
           </div>
         </div>

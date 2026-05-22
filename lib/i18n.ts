@@ -17,7 +17,7 @@ export const vi = {
   nav_mypage:       "Trang của tôi",
   nav_evaluation:   "📋 Đánh giá",
   nav_admin:        "⚙️ Quản trị",
-  nav_addpost:      "+ Đăng bài",
+  nav_addpost:      "+ Thưởng điểm",
   nav_logout:       "Đăng xuất",
   nav_change_photo: "Đổi ảnh",
 
