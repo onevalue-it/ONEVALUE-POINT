@@ -321,7 +321,7 @@ export default function LeaderboardPage() {
         {!txLoading && top3.length >= 1 && (
           <div className="mb-8 grid gap-4 md:grid-cols-3">
             {[top3[1], top3[0], top3[2]].map((e, i) => e && (
-              <div key={e.id} className={"relative overflow-hidden rounded-[2rem] border bg-white/85 p-6 text-center shadow-xl backdrop-blur-xl transition hover:-translate-y-1 " + (i === 1 ? "border-amber-200 shadow-amber-100" : "border-white/80")}>
+              <a key={e.id} href={`/profile/${e.id}`} className={"relative block overflow-hidden rounded-[2rem] border bg-white/85 p-6 text-center shadow-xl backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-2xl " + (i === 1 ? "border-amber-200 shadow-amber-100" : "border-white/80")}>
                 <div className={"absolute -right-16 -top-16 h-40 w-40 rounded-full blur-3xl " + (i === 1 ? "bg-amber-200/60" : "bg-blue-200/40")} />
                 <div className="relative">
                   {e.avatar ? (
@@ -343,7 +343,7 @@ export default function LeaderboardPage() {
                     {getBadge(e.points)}
                   </span>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         )}
@@ -385,8 +385,9 @@ export default function LeaderboardPage() {
               const isMe = e.id === currentUser?.id
               const pts = getPoints(e)
               return (
-                <div
+                <a
                   key={e.id}
+                  href={`/profile/${e.id}`}
                   className={"grid min-w-[720px] grid-cols-8 items-center border-b border-slate-100 px-6 py-4 transition last:border-0 " + (
                     isMe ? "bg-blue-50/70 hover:bg-blue-50" : "hover:bg-blue-50/40"
                   )}
@@ -432,7 +433,7 @@ export default function LeaderboardPage() {
                   </div>
                   <div className="text-sm font-bold text-emerald-600">+{e.monthly_points}</div>
                   <div className="font-bold text-blue-700">{pts.toLocaleString()} pts</div>
-                </div>
+                </a>
               )
             })}
           </div>

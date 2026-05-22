@@ -14,69 +14,6 @@ const categories = [
 ]
 const pointOptions = [10, 20, 30, 50, 100]
 
-const COMPANY_VALUES = [
-  {
-    id: "referral",
-    icon: "👥",
-    title: "Referral",
-    desc: "Giới thiệu ứng viên vào công ty",
-  },
-  {
-    id: "branding",
-    icon: "📣",
-    title: "Branding",
-    desc: "Có hành động tích cực quảng bá hình ảnh của công ty với khách hàng và người lao động, người xung quanh (Kiểm chứng được)",
-  },
-  {
-    id: "engagement",
-    icon: "🤝",
-    title: "Engagement",
-    desc: "Tham gia đóng góp vào hoạt động, sự kiện của công ty ngoài giờ làm việc/ ngày cuối tuần.",
-  },
-  {
-    id: "innovation",
-    icon: "💡",
-    title: "Innovation",
-    desc: "Đưa ra ý tưởng cải thiện giúp công ty phát triển và ý tưởng này được triển khai thành công trong thời gian đánh giá để kiểm chứng được",
-  },
-  {
-    id: "cost-saving",
-    icon: "💰",
-    title: "Cost Saving",
-    desc: "Có hành động/ phương án tiết kiệm tiền cho công ty ở mọi hình thức (Giấy in, tiền taxi, phát hiện và ngăn chặn chi phi lãng phí...) - Nội dung này không xét cho HCNS và Kế toán vì làm nghiệp vụ chính của phòng ban.",
-  },
-  {
-    id: "workplace-care",
-    icon: "🧹",
-    title: "Workplace Care",
-    desc: "Có hành động dọn dẹp vệ sinh, giữ gìn môi trường làm việc, bảo vệ trang thiết bị của công ty ngoài phạm mình vi phụ trách",
-  },
-  {
-    id: "ownership",
-    icon: "🧭",
-    title: "Ownership",
-    desc: "Là tấm gương cho các thành viên khác về NDA làm việc tại công ty với tinh thần: Không nói không - không nói khó. Ownership - tinh thần chủ sở hữu với công việc của mình làm. Nhận và tích cực làm tốt nghiệp vụ và công việc được giao dù không có kinh nghiệm hoặc kĩ năng liên quan trong thời gian đánh giá",
-  },
-  {
-    id: "retention-support",
-    icon: "🛡️",
-    title: "Retention Support",
-    desc: "Hành động giúp công ty ổn định nhân sự, giữ nười tốt cho tổ chức. (Biết có nhân sự có ý định hoặc trăn trở nghỉ việc thì người được đánh giá chủ động nắm bắt vấn đề trăn trở, giúp tháo gỡ khúc mắc dẫn tới nghỉ việc, báo cáo nhân sự và ng có thẩm quyền để công ty trao đổi song phương và tháo gỡ khó khăn -> Giúp công ty giữ người)",
-  },
-  {
-    id: "onboarding-support",
-    icon: "🌱",
-    title: "Onboarding Support",
-    desc: "Giúp đỡ nhân sự mới vào công ty nhanh chóng hòa nhập và được nhân sự đó cám ơn chính thức có báo với HCNS (Nhân sự được giúp đỡ là người ngoài team & không thuộc trách nhiệm của người được đánh giá)",
-  },
-  {
-    id: "efficiency",
-    icon: "⚡",
-    title: "Efficiency",
-    desc: "Có hành động sáng tạo giúp dự án kết thúc nhanh hơn dự kiến, công việc được giải quyết nhanh hơn kế hoạch (Kiểm chứng được trong dự án)",
-  },
-]
-
 
 const POINT_GUIDE = [
   {
@@ -114,7 +51,7 @@ type Recipient = {
 export default function PostPage() {
   useAuthGuard()
   const t = useT()
-  const { profiles, loadProfiles, loadUser, addPost, currentUser, myBudget } = useStore()
+  const { profiles, loadProfiles, loadUser, addPost, currentUser, myBudget, companyValues, loadCompanyValues } = useStore()
   const router = useRouter()
 
   const remaining = myBudget - (currentUser?.budget_used || 0)
@@ -138,6 +75,7 @@ export default function PostPage() {
   useEffect(() => {
     loadUser()
     loadProfiles()
+    loadCompanyValues()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -481,7 +419,7 @@ export default function PostPage() {
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                 >
                   <option value="">{t.post_value_ph}</option>
-                  {COMPANY_VALUES.map(v => (
+                  {companyValues.map(v => (
                     <option key={v.id} value={v.id}>{v.icon} {v.title}</option>
                   ))}
                 </select>
@@ -518,7 +456,7 @@ export default function PostPage() {
               <h2 className="text-base font-bold text-slate-950">{t.post_values_title}</h2>
               <p className="mt-1 text-xs text-slate-400">{t.post_values_sub}</p>
               <div className="mt-4 space-y-2">
-                {COMPANY_VALUES.map(v => {
+                {companyValues.map(v => {
                   const selected = selectedValueId === v.id
                   const expanded = expandedValueId === v.id
 
@@ -543,7 +481,7 @@ export default function PostPage() {
 
                       {expanded && (
                         <div className="rounded-2xl bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600 ring-1 ring-slate-200">
-                          {v.desc}
+                          {v.description}
                         </div>
                       )}
                     </div>

@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 import { useState, useEffect } from "react"
 import { useStore } from "@/lib/store"
 import Navbar from "@/components/ui/navbar"
@@ -51,6 +51,10 @@ export default function FeedPage() {
 
   function getProfileAvatar(name: string): string | undefined {
     return profiles.find(p => p.full_name === name)?.avatar ?? undefined
+  }
+
+  function getProfileByName(name: string) {
+    return profiles.find(p => p.full_name === name)
   }
   const [showPicker, setShowPicker] = useState<number | null>(null)
   const [toast, setToast] = useState("")
@@ -261,6 +265,10 @@ export default function FeedPage() {
               const toInitials = p.to.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
               const fromAvatarUrl = getProfileAvatar(p.from)
               const toAvatarUrl = getProfileAvatar(p.to)
+              const fromProfile = getProfileByName(p.from)
+              const toProfile = getProfileByName(p.to)
+              const fromHref = fromProfile ? `/profile/${fromProfile.id}` : "#"
+              const toHref = toProfile ? `/profile/${toProfile.id}` : "#"
               return (
                 <article
                   key={p.id}
@@ -290,7 +298,7 @@ export default function FeedPage() {
                       {/* Arrow + to avatar */}
                       <div className="flex items-center gap-2">
                         <div>
-                          <div className="text-sm font-bold text-slate-900 leading-tight">{p.from}</div>
+                          <a href={fromHref} className="text-sm font-bold text-slate-900 leading-tight hover:text-blue-700 hover:underline">{p.from}</a>
                           <div className="text-xs text-slate-400">{p.fromOffice}</div>
                         </div>
                         <span className="text-slate-300 text-lg mx-1">→</span>
@@ -305,7 +313,7 @@ export default function FeedPage() {
                           </div>
                         )}
                         <div>
-                          <div className={"text-sm font-bold leading-tight " + (isForMe ? "text-blue-700" : "text-slate-900")}>{p.to}</div>
+                          <a href={toHref} className={"text-sm font-bold leading-tight hover:underline " + (isForMe ? "text-blue-700" : "text-slate-900 hover:text-blue-700")}>{p.to}</a>
                           <div className="text-xs text-slate-400">{p.toOffice}</div>
                         </div>
                       </div>
