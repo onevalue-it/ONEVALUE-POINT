@@ -134,7 +134,7 @@ export function NotificationBell() {
                 <p className="text-sm">{t.notif_empty}</p>
               </div>
             ) : (
-              notifications.map(n => {
+              notifications.map((n: any) => {
                 const isFeedback = n.type === "feedback"
                 return (
                   <a

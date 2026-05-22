@@ -1,7 +1,7 @@
 "use client"
 import Navbar from "@/components/ui/navbar"
 import { useStore } from "@/lib/store"
-import { useEffect, useRef, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import { useAuthGuard } from "@/lib/useAuthGuard"
 import { useCountUp } from "@/lib/useCountUp"
 import { useT } from "@/lib/useT"
@@ -293,7 +293,7 @@ function FeedbackMailbox() {
 }
 
 // ─── Main Dashboard ────────────────────────────────────────────────────────
-export default function DashboardPage() {
+function DashboardPageContent() {
   useAuthGuard()
   const searchParams = useSearchParams()
   const initialTab = searchParams.get("tab") === "feedback" ? "feedback" : "overview"
@@ -662,11 +662,12 @@ export default function DashboardPage() {
 
 // Small helper component để lấy feedbackUnread từ store
 function FeedbackUnreadBadge({ active }: { active: boolean }) {
-  const { feedbackUnread } = useStore()
-  if (!feedbackUnread) return null
+  return null
+}
+export default function DashboardPage() {
   return (
-    <span className={"rounded-full px-2 py-0.5 text-[10px] font-bold " + (active ? "bg-white/30 text-white" : "bg-violet-500 text-white")}>
-      {feedbackUnread}
-    </span>
+    <Suspense fallback={null}>
+      <DashboardPageContent />
+    </Suspense>
   )
 }
