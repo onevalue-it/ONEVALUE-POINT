@@ -7,7 +7,15 @@ import { useCountUp } from "@/lib/useCountUp"
 import { useT } from "@/lib/useT"
 import { supabase } from "@/lib/supabase"
 import { useSearchParams } from "next/navigation"
-import type { Feedback } from "@/lib/store"
+type Feedback = {
+  id: number
+  to_user_id: string
+  to_name: string
+  title: string
+  message: string
+  is_read: boolean
+  created_at: string
+}
 
 const BADGES = [
   { name: "Bronze",   min: 0,    max: 400,  color: "bg-orange-100 text-orange-700 ring-orange-200" },
