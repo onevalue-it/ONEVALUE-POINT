@@ -353,7 +353,7 @@ export default function Navbar() {
         {/* Brand accent line */}
         <div className="absolute inset-x-0 top-0 h-0.5" style={{ background: "linear-gradient(to right, #24243F, #27D6D8)" }} />
 
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
+        <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-3 px-4 py-3 md:px-6">
 
           {/* Logo */}
           <a href="/leaderboard" className="group flex items-center gap-3">
@@ -369,7 +369,7 @@ export default function Navbar() {
           </a>
 
           {/* ── Desktop Nav ── */}
-          <div className="hidden md:flex items-center gap-1 text-sm font-medium">
+         <div className="hidden md:flex flex-1 items-center justify-center gap-1 text-sm font-medium whitespace-nowrap">
             {visibleNavLinks.map(({ href, label }) => {
               const isActive = pathname === href
               return (
