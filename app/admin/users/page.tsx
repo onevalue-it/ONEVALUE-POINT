@@ -228,6 +228,16 @@ export default function AdminUsersPage() {
     return c
   }, [profiles])
 
+  const departments = useMemo(() => {
+    return Array.from(
+      new Set(
+        profiles
+          .map(p => p.department)
+          .filter((d): d is string => Boolean(d))
+      )
+    ).sort()
+  }, [profiles])
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#DBEAFE_0,#F8FAFC_34%,#FFFFFF_70%)] text-slate-900">
       <Navbar />
@@ -363,12 +373,18 @@ export default function AdminUsersPage() {
 
                 <div>
                   <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Phòng ban</label>
-                  <input
+                  <select
                     value={newUser.department}
                     onChange={e => setNewUser(u => ({ ...u, department: e.target.value }))}
-                    placeholder="Engineering / Sales..."
                     className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
+                  >
+                    <option value="">Chọn phòng ban</option>
+                    {departments.map(dep => (
+                      <option key={dep} value={dep}>
+                        {dep}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="col-span-2">
