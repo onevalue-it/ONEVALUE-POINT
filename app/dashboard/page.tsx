@@ -347,7 +347,7 @@ function DashboardPageContent() {
   }, [currentUser?.full_name])
 
   const level = currentUser?.level || "staff"
-  const levelInfo = LEVEL_BUDGETS[level] || LEVEL_BUDGETS.staff
+  const levelInfo = LEVEL_BUDGETS[level] || LEVEL_BUDGETS.junior_ba
   const period = getCurrentPeriod()
   const baseBudget = currentUser?.giving_budget_monthly ?? levelInfo.budget
   const carriedOver = currentUser?.budget_carried || 0
