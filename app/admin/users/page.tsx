@@ -20,17 +20,36 @@ const ROLE_COLORS: Record<string, string> = {
   admin: "bg-emerald-50 text-emerald-700",
 }
 
-const LEVEL_LABELS: Record<string, string> = {
-  ceo: "CEO",
-  division_director: "COO/Division Lead/Director",
-  senior_manager: "Senior Manager",
-  project_manager: "Project Manager",
-  assistant_pm: "Assistant Project Manager",
-  senior_team_leader: "Senior Team Leader",
-  team_leader: "Team Leader",
-  senior_ba: "Senior BA",
-  junior_ba: "Junior BA",
-  intern: "Long term Intern / Part-time",
+const LEVEL_OPTIONS = [
+  { value: "ceo", label: "CEO", budget: 999999999, display: "CEO — Không giới hạn" },
+  { value: "division_director", label: "COO/Division Lead/Director", budget: 5000, display: "COO/Division Lead/Director — 5,000 pts" },
+  { value: "senior_manager", label: "Senior Manager", budget: 2500, display: "Senior Manager — 2,500 pts" },
+  { value: "project_manager", label: "Project Manager", budget: 2000, display: "Project Manager — 2,000 pts" },
+  { value: "assistant_pm", label: "Assistant Project Manager", budget: 1500, display: "Assistant Project Manager — 1,500 pts" },
+  { value: "senior_team_leader", label: "Senior Team Leader", budget: 1250, display: "Senior Team Leader — 1,250 pts" },
+  { value: "team_leader", label: "Team Leader", budget: 1000, display: "Team Leader — 1,000 pts" },
+  { value: "senior_ba", label: "Senior BA", budget: 750, display: "Senior BA — 750 pts" },
+  { value: "junior_ba", label: "Junior BA", budget: 500, display: "Junior BA — 500 pts" },
+  { value: "intern", label: "Long term Intern / Part-time", budget: 200, display: "Long term Intern / Part-time — 200 pts" },
+]
+
+const LEVEL_LABELS: Record<string, string> = Object.fromEntries(
+  LEVEL_OPTIONS.map(l => [l.value, l.label])
+)
+
+function getBudgetByLevel(level: string) {
+  return LEVEL_OPTIONS.find(l => l.value === level)?.budget ?? 500
+}
+
+function getCurrentHalfYearPeriod() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const isFirstHalf = now.getMonth() < 6
+
+  return {
+    periodStart: `${year}-${isFirstHalf ? "01" : "07"}-01`,
+    periodEnd: `${year}-${isFirstHalf ? "06-30" : "12-31"}`,
+  }
 }
 
 type Profile = {
@@ -55,7 +74,7 @@ const EMPTY_NEW_USER = {
   full_name: "",
   password: "Onevalue@2026",
   role: "employee",
-  level: "staff",
+  level: "junior_ba",
   office: "Vietnam",
   department: "",
   position: "",
@@ -78,25 +97,21 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("")
   const [filterRole, setFilterRole] = useState("all")
 
-  // Edit modal
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null)
   const [editRole, setEditRole] = useState("")
-  const [editLevel, setEditLevel] = useState("staff")
+  const [editLevel, setEditLevel] = useState("junior_ba")
   const [editBudget, setEditBudget] = useState<number | "">("")
   const [editActive, setEditActive] = useState(true)
   const [editSaving, setEditSaving] = useState(false)
   const [resetEmailSent, setResetEmailSent] = useState<string | null>(null)
 
-  // Create user modal
   const [showCreate, setShowCreate] = useState(false)
   const [newUser, setNewUser] = useState({ ...EMPTY_NEW_USER })
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState("")
 
-  // Delete confirm
   const [deletingProfile, setDeletingProfile] = useState<Profile | null>(null)
   const [deleting, setDeleting] = useState(false)
-
   const [toast, setToast] = useState("")
 
   useEffect(() => { loadUser() }, [])
@@ -129,23 +144,38 @@ export default function AdminUsersPage() {
     setEditingProfile(p)
     setEditRole(p.role)
     setEditActive(p.is_active ?? true)
-    setEditLevel(p.level || "staff")
+    setEditLevel(p.level || "junior_ba")
     setEditBudget(p.giving_budget_monthly ?? "")
   }
 
   async function saveEdit() {
     if (!editingProfile) return
+
+    const budget = editBudget === "" ? getBudgetByLevel(editLevel) : Number(editBudget)
+    const { periodStart, periodEnd } = getCurrentHalfYearPeriod()
+
     setEditSaving(true)
+
     await supabase.from("profiles").update({
       role: editRole,
       is_active: editActive,
       level: editLevel,
-      giving_budget_monthly: editBudget === "" ? null : Number(editBudget),
+      giving_budget_monthly: budget,
+      budget_period_start: periodStart,
+      budget_period_end: periodEnd,
     }).eq("id", editingProfile.id)
+
     setProfiles(ps => ps.map(p => p.id === editingProfile.id
-      ? { ...p, role: editRole, is_active: editActive, level: editLevel, giving_budget_monthly: editBudget === "" ? undefined : Number(editBudget) }
+      ? {
+          ...p,
+          role: editRole,
+          is_active: editActive,
+          level: editLevel,
+          giving_budget_monthly: budget,
+        }
       : p
     ))
+
     setEditSaving(false)
     setEditingProfile(null)
     showToast("✅ Đã cập nhật người dùng")
@@ -171,17 +201,60 @@ export default function AdminUsersPage() {
       setCreateError("Vui lòng chọn văn phòng")
       return
     }
+
+    const budget = getBudgetByLevel(newUser.level)
+    const { periodStart, periodEnd } = getCurrentHalfYearPeriod()
+
     setCreating(true)
+
     try {
       const res = await supabase.functions.invoke("create-user", {
-        body: newUser,
+        body: {
+          ...newUser,
+          giving_budget_monthly: budget,
+          budget_carried: 0,
+          budget_given: 0,
+          budget_period_start: periodStart,
+          budget_period_end: periodEnd,
+        },
       })
+
       if (res.error || res.data?.error) {
         const raw = res.data?.error || res.error?.message || "Tạo user thất bại"
         setCreateError(friendlyError(raw))
         setCreating(false)
         return
       }
+
+      await supabase
+        .from("profiles")
+        .update({
+          level: newUser.level,
+          giving_budget_monthly: budget,
+          budget_carried: 0,
+          budget_given: 0,
+          budget_period_start: periodStart,
+          budget_period_end: periodEnd,
+        })
+        .eq("email", newUser.email)
+
+      const { data: createdProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", newUser.email)
+        .single()
+
+      if (createdProfile?.id) {
+        await supabase.from("budget_periods").upsert({
+          user_id: createdProfile.id,
+          period_start: periodStart,
+          period_end: periodEnd,
+          budget_allocated: budget,
+          budget_carried: 0,
+          budget_used: 0,
+        })
+      }
+
       showToast("✅ Đã tạo tài khoản " + newUser.full_name)
       setShowCreate(false)
       setNewUser({ ...EMPTY_NEW_USER })
@@ -189,28 +262,33 @@ export default function AdminUsersPage() {
     } catch (e: any) {
       setCreateError(friendlyError(e.message || "Lỗi không xác định"))
     }
+
     setCreating(false)
   }
 
   async function deleteUser() {
     if (!deletingProfile) return
     setDeleting(true)
+
     try {
       const res = await supabase.functions.invoke("delete-user", {
         body: { user_id: deletingProfile.id },
       })
+
       if (res.error || res.data?.error) {
         showToast("❌ Xóa thất bại: " + (res.data?.error || res.error?.message))
         setDeleting(false)
         setDeletingProfile(null)
         return
       }
+
       setProfiles(ps => ps.filter(p => p.id !== deletingProfile.id))
       showToast("🗑️ Đã xóa tài khoản " + deletingProfile.full_name)
       setDeletingProfile(null)
     } catch (e: any) {
       showToast("❌ Lỗi: " + e.message)
     }
+
     setDeleting(false)
   }
 
@@ -245,14 +323,12 @@ export default function AdminUsersPage() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#DBEAFE_0,#F8FAFC_34%,#FFFFFF_70%)] text-slate-900">
       <Navbar />
 
-      {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-xl">
           {toast}
         </div>
       )}
 
-      {/* Delete Confirm Modal */}
       {deletingProfile && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="w-full max-w-sm rounded-[2rem] border border-white/80 bg-white p-7 shadow-2xl">
@@ -287,7 +363,6 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* Create User Modal */}
       {showCreate && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="w-full max-w-lg rounded-[2rem] border border-white/80 bg-white p-7 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -352,13 +427,11 @@ export default function AdminUsersPage() {
                     onChange={e => setNewUser(u => ({ ...u, level: e.target.value }))}
                     className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   >
-                    <option value="ceo">CEO</option>
-                    <option value="director">Director/Head</option>
-                    <option value="manager">Manager</option>
-                    <option value="pm">PM/Team Leader</option>
-                    <option value="senior">Senior</option>
-                    <option value="staff">Staff/Junior</option>
-                    <option value="intern">Intern/Part-time</option>
+                    {LEVEL_OPTIONS.map(level => (
+                      <option key={level.value} value={level.value}>
+                        {level.display}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -427,7 +500,6 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* Edit Modal */}
       {editingProfile && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="w-full max-w-md rounded-[2rem] border border-white/80 bg-white p-7 shadow-2xl">
@@ -463,16 +535,11 @@ export default function AdminUsersPage() {
                   onChange={e => setEditLevel(e.target.value)}
                   className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
-                  <option value="ceo">CEO — Không giới hạn</option>
-<option value="division_director">COO/Division Lead/Director — 5,000 pts</option>
-<option value="senior_manager">Senior Manager — 2,500 pts</option>
-<option value="project_manager">Project Manager — 2,000 pts</option>
-<option value="assistant_pm">Assistant Project Manager — 1,500 pts</option>
-<option value="senior_team_leader">Senior Team Leader — 1,250 pts</option>
-<option value="team_leader">Team Leader — 1,000 pts</option>
-<option value="senior_ba">Senior BA — 750 pts</option>
-<option value="junior_ba">Junior BA — 500 pts</option>
-<option value="intern">Long term Intern / Part-time — 200 pts</option>
+                  {LEVEL_OPTIONS.map(level => (
+                    <option key={level.value} value={level.value}>
+                      {level.display}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -532,7 +599,6 @@ export default function AdminUsersPage() {
       )}
 
       <main className="mx-auto max-w-5xl px-4 py-8 md:px-6">
-        {/* Header */}
         <div className="relative mb-6 overflow-hidden rounded-[2rem] border border-white/70 bg-white/75 p-7 shadow-xl backdrop-blur-xl">
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div>
@@ -551,7 +617,6 @@ export default function AdminUsersPage() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="mb-5 space-y-3">
           <div className="flex flex-wrap gap-2">
             {(["all", "employee", "manager", "hr", "admin"] as const).map(r => (
