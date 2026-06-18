@@ -26,13 +26,16 @@ const BADGES = [
 ]
 
 const LEVEL_BUDGETS: Record<string, { label: string; budget: number; unlimited: boolean }> = {
-  ceo:      { label: "CEO",                    budget: 0,    unlimited: true  },
-  director: { label: "Director/Head",          budget: 2500, unlimited: false },
-  manager:  { label: "Manager",                budget: 2000, unlimited: false },
-  pm:       { label: "PM/Team Leader",         budget: 1200, unlimited: false },
-  senior:   { label: "Senior",                 budget: 700,  unlimited: false },
-  staff:    { label: "Staff/Junior",           budget: 400,  unlimited: false },
-  intern:   { label: "Intern/Part-time",       budget: 200,  unlimited: false },
+  ceo: { label: "CEO", budget: 0, unlimited: true },
+  division_director: { label: "COO/Division Lead/Director", budget: 5000, unlimited: false },
+  senior_manager: { label: "Senior Manager", budget: 2500, unlimited: false },
+  project_manager: { label: "Project Manager", budget: 2000, unlimited: false },
+  assistant_pm: { label: "Assistant Project Manager", budget: 1500, unlimited: false },
+  senior_team_leader: { label: "Senior Team Leader", budget: 1250, unlimited: false },
+  team_leader: { label: "Team Leader", budget: 1000, unlimited: false },
+  senior_ba: { label: "Senior BA", budget: 750, unlimited: false },
+  junior_ba: { label: "Junior BA", budget: 500, unlimited: false },
+  intern: { label: "Long term Intern / Part-time", budget: 200, unlimited: false },
 }
 
 function getCurrentPeriod() {

@@ -21,13 +21,16 @@ const ROLE_COLORS: Record<string, string> = {
 }
 
 const LEVEL_LABELS: Record<string, string> = {
-  ceo:      "CEO",
-  director: "Director/Head",
-  manager:  "Manager",
-  pm:       "PM/Team Leader",
-  senior:   "Senior",
-  staff:    "Staff/Junior",
-  intern:   "Intern/Part-time",
+  ceo: "CEO",
+  division_director: "COO/Division Lead/Director",
+  senior_manager: "Senior Manager",
+  project_manager: "Project Manager",
+  assistant_pm: "Assistant Project Manager",
+  senior_team_leader: "Senior Team Leader",
+  team_leader: "Team Leader",
+  senior_ba: "Senior BA",
+  junior_ba: "Junior BA",
+  intern: "Long term Intern / Part-time",
 }
 
 type Profile = {
@@ -461,12 +464,15 @@ export default function AdminUsersPage() {
                   className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
                   <option value="ceo">CEO — Không giới hạn</option>
-                  <option value="director">Director/Head — 2,000-3,000 pts</option>
-                  <option value="manager">Manager — 2,000-3,000 pts</option>
-                  <option value="pm">PM/Team Leader — 1,200-1,500 pts</option>
-                  <option value="senior">Senior — 700-1,000 pts</option>
-                  <option value="staff">Staff/Junior — 400-700 pts</option>
-                  <option value="intern">Intern/Part-time — 200-300 pts</option>
+<option value="division_director">COO/Division Lead/Director — 5,000 pts</option>
+<option value="senior_manager">Senior Manager — 2,500 pts</option>
+<option value="project_manager">Project Manager — 2,000 pts</option>
+<option value="assistant_pm">Assistant Project Manager — 1,500 pts</option>
+<option value="senior_team_leader">Senior Team Leader — 1,250 pts</option>
+<option value="team_leader">Team Leader — 1,000 pts</option>
+<option value="senior_ba">Senior BA — 750 pts</option>
+<option value="junior_ba">Junior BA — 500 pts</option>
+<option value="intern">Long term Intern / Part-time — 200 pts</option>
                 </select>
               </div>
 
