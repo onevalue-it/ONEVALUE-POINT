@@ -100,6 +100,9 @@ export default function AdminUsersPage() {
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null)
   const [editRole, setEditRole] = useState("")
   const [editLevel, setEditLevel] = useState("junior_ba")
+  const [editOffice, setEditOffice] = useState("")
+  const [editDepartment, setEditDepartment] = useState("")
+  const [editPosition, setEditPosition] = useState("")
   const [editBudget, setEditBudget] = useState<number | "">("")
   const [editActive, setEditActive] = useState(true)
   const [editSaving, setEditSaving] = useState(false)
@@ -145,10 +148,13 @@ export default function AdminUsersPage() {
     setEditRole(p.role)
     setEditActive(p.is_active ?? true)
     setEditLevel(p.level || "junior_ba")
+    setEditOffice(p.office || "Vietnam")
+    setEditDepartment(p.department || "")
+    setEditPosition(p.position || "")
     setEditBudget(p.giving_budget_monthly ?? "")
   }
 
-async function saveEdit() {
+  async function saveEdit() {
   if (!editingProfile) return
 
   const budget =
@@ -173,13 +179,16 @@ async function saveEdit() {
         role: editRole,
         is_active: editActive,
         level: editLevel,
+        office: editOffice,
+        department: editDepartment,
+        position: editPosition,
         giving_budget_monthly: budget,
         budget_period_start: periodStart,
         budget_period_end: periodEnd,
         updated_at: new Date().toISOString(),
       })
       .eq("id", editingProfile.id)
-      .select("id, role, is_active, level, giving_budget_monthly")
+      .select("id, role, is_active, level, office, department, position, giving_budget_monthly")
       .single()
 
     if (profileError) {
@@ -217,15 +226,17 @@ async function saveEdit() {
               role: updatedProfile.role,
               is_active: updatedProfile.is_active,
               level: updatedProfile.level,
-              giving_budget_monthly:
-                updatedProfile.giving_budget_monthly,
+              office: updatedProfile.office,
+              department: updatedProfile.department,
+              position: updatedProfile.position,
+              giving_budget_monthly: updatedProfile.giving_budget_monthly,
             }
           : profile
       )
     )
 
     setEditingProfile(null)
-    showToast(`✅ Đã cập nhật ngân sách thành ${budget.toLocaleString()} pts`)
+    showToast(`✅ Đã cập nhật ${editingProfile.full_name}`)
   } catch (error) {
     const message =
       error instanceof Error
@@ -558,7 +569,7 @@ async function saveEdit() {
 
       {editingProfile && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md rounded-[2rem] border border-white/80 bg-white p-7 shadow-2xl">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2rem] border border-white/80 bg-white p-7 shadow-2xl">
             <div className="flex items-center gap-3 mb-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-sm font-bold text-white">
                 {(editingProfile.full_name || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
@@ -597,6 +608,46 @@ async function saveEdit() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Văn phòng</label>
+                  <select
+                    value={editOffice}
+                    onChange={e => setEditOffice(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="Vietnam">Vietnam</option>
+                    <option value="Japan">Japan</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Phòng ban</label>
+                  <select
+                    value={editDepartment}
+                    onChange={e => setEditDepartment(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">Chọn phòng ban</option>
+                    {departments.map(dep => (
+                      <option key={dep} value={dep}>
+                        {dep}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Chức vụ</label>
+                <input
+                  value={editPosition}
+                  onChange={e => setEditPosition(e.target.value)}
+                  placeholder="Software Engineer / PM..."
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
               </div>
 
               <div>
