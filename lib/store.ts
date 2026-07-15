@@ -234,105 +234,59 @@ export const useStore = create<Store>()((set, get) => ({
   },
 
   addPost: async (postData) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    const { data: freshUser } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single()
-
-    if (!freshUser) return
-
-    const { data: newRow, error: insertError } = await supabase
-      .from("posts")
-      .insert({
-        from_name: freshUser.full_name,
-        from_office: freshUser.office,
-        from_avatar: freshUser.avatar || null,
-        from_color: "from-sky-500 to-blue-500",
-        to_name: postData.to,
-        to_office: postData.toOffice,
-        points: postData.points,
-        category: postData.category,
-        title: postData.title,
-        message: postData.message,
-        company_value_id: postData.companyValueId || null,
-        reactions: {},
-      })
-      .select()
-      .single()
-
-    if (!newRow || insertError) return
-
-    const { companyValues } = get()
-    // Real-time will handle adding to feed for other users
-    // For sender: add immediately to top
-    set({ posts: [dbToPost(newRow, companyValues), ...get().posts] })
-
-    const receiverProfile = get().profiles.find(p => p.full_name === postData.to)
-
-    if (receiverProfile) {
-      await supabase.from("point_transactions").insert({
-        from_user_id: freshUser.id,
-        to_user_id: receiverProfile.id,
-        post_id: newRow.id,
-        company_value_id: postData.companyValueId || null,
-        points: postData.points,
-        transaction_type: "appreciation",
-      })
-
-      const { data: freshReceiver } = await supabase
-        .from("profiles")
-        .select("points, monthly_points")
-        .eq("id", receiverProfile.id)
-        .single()
-
-      if (freshReceiver) {
-        await supabase
-          .from("profiles")
-          .update({
-            points: freshReceiver.points + postData.points,
-            monthly_points: freshReceiver.monthly_points + postData.points,
-          })
-          .eq("id", receiverProfile.id)
-      }
+    if (authError || !user) {
+      throw new Error("Bạn chưa đăng nhập")
     }
 
-    await supabase
-      .from("profiles")
-      .update({ budget_used: (freshUser.budget_used || 0) + postData.points })
-      .eq("id", freshUser.id)
+    const receiverProfile = get().profiles.find(
+      p => p.full_name === postData.to
+    )
 
-    // Insert notification for receiver
-    if (receiverProfile) {
-      await supabase.from("notifications").insert({
-        user_id: receiverProfile.id,
-        post_id: newRow.id,
-        from_name: freshUser.full_name,
-        from_avatar: freshUser.avatar || null,
-        points: postData.points,
-        title: postData.title,
-      })
-
-      // Send email notification via Edge Function (requires RESEND_API_KEY env var in Supabase)
-      if (receiverProfile.email) {
-        supabase.functions.invoke("notify-kudos", {
-          body: {
-            to_email: receiverProfile.email,
-            to_name: receiverProfile.full_name,
-            from_name: freshUser.full_name,
-            points: postData.points,
-            title: postData.title,
-            message: postData.message,
-          },
-        }).catch(() => { /* email failure is non-blocking */ })
-      }
+    if (!receiverProfile) {
+      throw new Error("Không tìm thấy người nhận")
     }
 
-    await get().loadUser()
-    await get().loadProfiles()
+    const { data: postId, error: rpcError } = await supabase.rpc(
+      "give_points",
+      {
+        p_to_user_id: receiverProfile.id,
+        p_points: postData.points,
+        p_category: postData.category,
+        p_title: postData.title,
+        p_message: postData.message,
+        p_company_value_id: postData.companyValueId || null,
+      }
+    )
+
+    if (rpcError) {
+      console.error("give_points RPC error:", rpcError)
+      throw new Error(rpcError.message || "Không thể gửi khen thưởng")
+    }
+
+    await Promise.all([
+      get().loadPosts(true),
+      get().loadUser(),
+      get().loadProfiles(),
+      get().loadNotifications(),
+    ])
+
+    const freshUser = get().currentUser
+
+    if (receiverProfile.email && freshUser) {
+      supabase.functions.invoke("notify-kudos", {
+        body: {
+          to_email: receiverProfile.email,
+          to_name: receiverProfile.full_name,
+          from_name: freshUser.full_name,
+          points: postData.points,
+          title: postData.title,
+          message: postData.message,
+          post_id: postId,
+        },
+      }).catch(() => {})
+    }
   },
 
   deletePost: async (postId) => {
