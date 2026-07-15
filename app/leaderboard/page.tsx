@@ -15,13 +15,23 @@ const badgeColor: Record<string, string> = {
 }
 
 const LEVEL_LABELS: Record<string, string> = {
-  ceo:      "CEO",
+  ceo: "CEO",
+  division_director: "COO/Division Lead/Director",
+  senior_manager: "Senior Manager",
+  project_manager: "Project Manager",
+  assistant_pm: "Assistant Project Manager",
+  senior_team_leader: "Senior Team Leader",
+  team_leader: "Team Leader",
+  senior_ba: "Senior BA",
+  junior_ba: "Junior BA",
+
+  // Giữ tương thích với dữ liệu level cũ trong profiles
   director: "Director/Head",
-  manager:  "Manager",
-  pm:       "PM/Team Leader",
-  senior:   "Senior",
-  staff:    "Staff/Junior",
-  intern:   "Intern/Part-time",
+  manager: "Manager",
+  pm: "PM/Team Leader",
+  senior: "Senior",
+  staff: "Staff/Junior",
+  intern: "Long term Intern / Part-time",
 }
 
 function getBadge(points: number): string {
