@@ -335,28 +335,54 @@ export default function AdminUsersPage() {
 
   async function deleteUser() {
     if (!deletingProfile) return
+
     setDeleting(true)
 
     try {
-      const res = await supabase.functions.invoke("delete-user", {
-        body: { user_id: deletingProfile.id },
-      })
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
 
-      if (res.error || res.data?.error) {
-        showToast("❌ Xóa thất bại: " + (res.data?.error || res.error?.message))
-        setDeleting(false)
-        setDeletingProfile(null)
-        return
+      if (sessionError || !session?.access_token) {
+        throw new Error("Phiên đăng nhập không hợp lệ")
       }
 
-      setProfiles(ps => ps.filter(p => p.id !== deletingProfile.id))
+      const response = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          user_id: deletingProfile.id,
+        }),
+      })
+
+      const result = await response.json().catch(() => ({
+        error: "Phản hồi từ máy chủ không hợp lệ",
+      }))
+
+      if (!response.ok || result.error) {
+        throw new Error(result.error || "Không thể xóa người dùng")
+      }
+
+      setProfiles(current =>
+        current.filter(profile => profile.id !== deletingProfile.id)
+      )
+
       showToast("🗑️ Đã xóa tài khoản " + deletingProfile.full_name)
       setDeletingProfile(null)
-    } catch (e: any) {
-      showToast("❌ Lỗi: " + e.message)
-    }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Không thể xóa người dùng"
 
-    setDeleting(false)
+      showToast("❌ Xóa thất bại: " + message)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const filtered = useMemo(() => profiles.filter(p => {
