@@ -148,39 +148,95 @@ export default function AdminUsersPage() {
     setEditBudget(p.giving_budget_monthly ?? "")
   }
 
-  async function saveEdit() {
-    if (!editingProfile) return
+async function saveEdit() {
+  if (!editingProfile) return
 
-    const budget = editBudget === "" ? getBudgetByLevel(editLevel) : Number(editBudget)
-    const { periodStart, periodEnd } = getCurrentHalfYearPeriod()
+  const budget =
+    editBudget === ""
+      ? getBudgetByLevel(editLevel)
+      : Number(editBudget)
 
-    setEditSaving(true)
-
-    await supabase.from("profiles").update({
-      role: editRole,
-      is_active: editActive,
-      level: editLevel,
-      giving_budget_monthly: budget,
-      budget_period_start: periodStart,
-      budget_period_end: periodEnd,
-    }).eq("id", editingProfile.id)
-
-    setProfiles(ps => ps.map(p => p.id === editingProfile.id
-      ? {
-          ...p,
-          role: editRole,
-          is_active: editActive,
-          level: editLevel,
-          giving_budget_monthly: budget,
-        }
-      : p
-    ))
-
-    setEditSaving(false)
-    setEditingProfile(null)
-    showToast("✅ Đã cập nhật người dùng")
+  if (!Number.isFinite(budget) || budget < 0) {
+    showToast("❌ Ngân sách không hợp lệ")
+    return
   }
 
+  const { periodStart, periodEnd } = getCurrentHalfYearPeriod()
+
+  setEditSaving(true)
+
+  try {
+    // Cập nhật thông tin chính trong profiles
+    const { data: updatedProfile, error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        role: editRole,
+        is_active: editActive,
+        level: editLevel,
+        giving_budget_monthly: budget,
+        budget_period_start: periodStart,
+        budget_period_end: periodEnd,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", editingProfile.id)
+      .select("id, role, is_active, level, giving_budget_monthly")
+      .single()
+
+    if (profileError) {
+      console.error("Update profile error:", profileError)
+      throw new Error(profileError.message)
+    }
+
+    // Đồng bộ ngân sách của kỳ hiện tại
+    const { error: budgetError } = await supabase
+      .from("budget_periods")
+      .upsert(
+        {
+          user_id: editingProfile.id,
+          period_start: periodStart,
+          period_end: periodEnd,
+          budget_allocated: budget,
+          budget_carried: 0,
+          budget_used: editingProfile.budget_used ?? 0,
+        },
+        {
+          onConflict: "user_id,period_start",
+        }
+      )
+
+    if (budgetError) {
+      console.error("Update budget period error:", budgetError)
+      throw new Error(budgetError.message)
+    }
+
+    setProfiles(currentProfiles =>
+      currentProfiles.map(profile =>
+        profile.id === editingProfile.id
+          ? {
+              ...profile,
+              role: updatedProfile.role,
+              is_active: updatedProfile.is_active,
+              level: updatedProfile.level,
+              giving_budget_monthly:
+                updatedProfile.giving_budget_monthly,
+            }
+          : profile
+      )
+    )
+
+    setEditingProfile(null)
+    showToast(`✅ Đã cập nhật ngân sách thành ${budget.toLocaleString()} pts`)
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Không thể cập nhật người dùng"
+
+    showToast("❌ Lưu thất bại: " + message)
+  } finally {
+    setEditSaving(false)
+  }
+}
   async function sendPasswordReset(email: string) {
     const origin = typeof window !== "undefined" ? window.location.origin : ""
     await supabase.auth.resetPasswordForEmail(email, {
