@@ -8,7 +8,8 @@ import { supabase } from "@/lib/supabase"
 
 // ─── Feedback Modal ────────────────────────────────────────────────────────
 function FeedbackModal({ onClose }: { onClose: () => void }) {
-  const { profiles, currentUser } = useStore()
+  const { profiles, currentUser, lang } = useStore()
+  const L = (vi: string, ja: string) => lang === "ja" ? ja : vi
   const [toUserId, setToUserId] = useState("")
   const [title, setTitle] = useState("")
   const [message, setMessage] = useState("")
@@ -22,17 +23,17 @@ async function handleSubmit() {
   setError("")
 
   if (!toUserId) {
-    setError("Vui lòng chọn người nhận")
+    setError(L("Vui lòng chọn người nhận", "受取人を選択してください"))
     return
   }
 
   if (!title.trim()) {
-    setError("Vui lòng nhập tiêu đề")
+    setError(L("Vui lòng nhập tiêu đề", "タイトルを入力してください"))
     return
   }
 
   if (!message.trim()) {
-    setError("Vui lòng nhập nội dung góp ý")
+    setError(L("Vui lòng nhập nội dung góp ý", "フィードバック内容を入力してください"))
     return
   }
 
@@ -42,7 +43,7 @@ async function handleSubmit() {
     const recipient = profiles.find(p => p.id === toUserId)
 
     if (!recipient) {
-      setError("Không tìm thấy người nhận")
+      setError(L("Không tìm thấy người nhận", "受取人が見つかりません"))
       setLoading(false)
       return
     }
@@ -62,7 +63,7 @@ async function handleSubmit() {
 
     if (fbErr || !fb) {
       console.error("feedback insert error:", fbErr)
-      setError(fbErr?.message || "Có lỗi xảy ra khi gửi góp ý")
+      setError(fbErr?.message || L("Có lỗi xảy ra khi gửi góp ý", "フィードバックの送信中にエラーが発生しました"))
       setLoading(false)
       return
     }
@@ -87,7 +88,7 @@ async function handleSubmit() {
           user_id: toUserId,
           post_id: null,
           feedback_id: fb.id,
-          from_name: "Ẩn danh",
+          from_name: L("Ẩn danh", "匿名"),
           from_avatar: null,
           points: 0,
           title: title.trim(),
@@ -106,7 +107,7 @@ async function handleSubmit() {
     setSuccess(true)
   } catch (err: any) {
     console.error(err)
-    setError(err.message || "Có lỗi xảy ra")
+    setError(err.message || L("Có lỗi xảy ra", "エラーが発生しました"))
   }
 
   setLoading(false)
@@ -124,14 +125,13 @@ async function handleSubmit() {
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
         <div className="w-full max-w-md rounded-[2rem] border border-white/80 bg-white p-8 shadow-2xl text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-4xl">💌</div>
-          <h3 className="text-lg font-bold text-slate-900">Đã gửi góp ý!</h3>
+          <h3 className="text-lg font-bold text-slate-900">{L("Đã gửi góp ý!", "フィードバックを送信しました！")}</h3>
           <p className="mt-2 text-sm text-slate-500">
-            Người nhận sẽ nhận được thông báo và đọc góp ý của bạn.<br />
-            Danh tính của bạn được bảo mật hoàn toàn.
+            {L("Người nhận sẽ nhận được thông báo và đọc góp ý của bạn. Danh tính của bạn được bảo mật hoàn toàn.", "受取人に通知が届き、フィードバックを確認できます。あなたの身元は完全に匿名です。")}
           </p>
           <button onClick={onClose}
             className="mt-6 rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition">
-            Đóng
+            {L("Đóng", "閉じる")}
           </button>
         </div>
       </div>
@@ -145,9 +145,9 @@ async function handleSubmit() {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div>
-            <h3 className="text-base font-bold text-slate-900">💌 Góp ý cải thiện</h3>
+            <h3 className="text-base font-bold text-slate-900">💌 {L("Góp ý cải thiện", "改善フィードバック")}</h3>
             <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
-              <span>🔒</span> Ẩn danh — người nhận không biết bạn là ai
+              <span>🔒</span> {L("Ẩn danh — người nhận không biết bạn là ai", "匿名 — 受取人には送信者が表示されません")}
             </p>
           </div>
           <button onClick={onClose}
@@ -159,13 +159,13 @@ async function handleSubmit() {
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-bold text-slate-700">Gửi đến</label>
+            <label className="mb-2 block text-sm font-bold text-slate-700">{L("Gửi đến", "送信先")}</label>
             <select
               value={toUserId}
               onChange={e => setToUserId(e.target.value)}
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
             >
-              <option value="">Chọn người nhận...</option>
+              <option value="">{L("Chọn người nhận...", "受取人を選択...")}</option>
               {otherProfiles.map(p => (
                 <option key={p.id} value={p.id}>
                   {p.full_name}{p.department ? ` — ${p.department}` : ""}
@@ -175,21 +175,21 @@ async function handleSubmit() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-bold text-slate-700">Tiêu đề</label>
+            <label className="mb-2 block text-sm font-bold text-slate-700">{L("Tiêu đề", "タイトル")}</label>
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="Tóm tắt góp ý của bạn..."
+              placeholder={L("Tóm tắt góp ý của bạn...", "フィードバックの要約...")}
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-bold text-slate-700">Nội dung</label>
+            <label className="mb-2 block text-sm font-bold text-slate-700">{L("Nội dung", "内容")}</label>
             <textarea
               value={message}
               onChange={e => setMessage(e.target.value)}
-              placeholder="Mô tả cụ thể để người nhận có thể hiểu và cải thiện..."
+              placeholder={L("Mô tả cụ thể để người nhận có thể hiểu và cải thiện...", "相手が理解し改善できるよう、具体的に記入してください...")}
               rows={4}
               className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
             />
@@ -204,11 +204,11 @@ async function handleSubmit() {
           <div className="flex gap-3 pt-1">
             <button onClick={onClose}
               className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 transition">
-              Hủy
+              {L("Hủy", "キャンセル")}
             </button>
             <button onClick={handleSubmit} disabled={loading}
               className="flex-1 rounded-2xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60 transition">
-              {loading ? "Đang gửi..." : "🔒 Gửi ẩn danh"}
+              {loading ? L("Đang gửi...", "送信中...") : L("🔒 Gửi ẩn danh", "🔒 匿名で送信")}
             </button>
           </div>
         </div>
@@ -294,8 +294,8 @@ export default function Navbar() {
 
   async function handlePasswordChange() {
     setPwError("")
-    if (pwNew.length < 8) { setPwError("Mật khẩu mới phải ít nhất 8 ký tự."); return }
-    if (pwNew !== pwConfirm) { setPwError("Mật khẩu xác nhận không khớp."); return }
+    if (pwNew.length < 8) { setPwError(lang === "ja" ? "新しいパスワードは8文字以上で入力してください。" : "Mật khẩu mới phải ít nhất 8 ký tự."); return }
+    if (pwNew !== pwConfirm) { setPwError(lang === "ja" ? "確認用パスワードが一致しません。" : "Mật khẩu xác nhận không khớp."); return }
     setPwLoading(true)
     const { error } = await supabase.auth.updateUser({ password: pwNew })
     setPwLoading(false)
@@ -323,21 +323,21 @@ export default function Navbar() {
     <div className="mt-2 space-y-2">
       <input
         type="password" value={pwNew} onChange={e => setPwNew(e.target.value)}
-        placeholder="Mật khẩu mới (≥8 ký tự)"
+        placeholder={lang === "ja" ? "新しいパスワード（8文字以上）" : "Mật khẩu mới (≥8 ký tự)"}
         className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
       />
       <input
         type="password" value={pwConfirm} onChange={e => setPwConfirm(e.target.value)}
-        placeholder="Xác nhận mật khẩu mới"
+        placeholder={lang === "ja" ? "新しいパスワードを再入力" : "Xác nhận mật khẩu mới"}
         onKeyDown={e => e.key === "Enter" && handlePasswordChange()}
         className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
       />
       {pwError && <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 ring-1 ring-red-100">{pwError}</p>}
-      {pwSuccess && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">✓ Đổi mật khẩu thành công!</p>}
+      {pwSuccess && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">✓ {lang === "ja" ? "パスワードを変更しました！" : "Đổi mật khẩu thành công!"}</p>}
       <div className="flex gap-2">
         <button onClick={handlePasswordChange} disabled={pwLoading}
           className="flex-1 rounded-full bg-blue-600 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50">
-          {pwLoading ? "Đang lưu..." : "Lưu"}
+          {pwLoading ? (lang === "ja" ? "保存中..." : "Đang lưu...") : (lang === "ja" ? "保存" : "Lưu")}
         </button>
         <button onClick={() => { setShowPwForm(false); setPwNew(""); setPwConfirm(""); setPwError("") }}
           className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
@@ -389,7 +389,7 @@ export default function Navbar() {
                 className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-500 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
               >
                 <span>💌</span>
-                <span>Góp ý</span>
+                <span>{lang === "ja" ? "フィードバック" : "Góp ý"}</span>
               </button>
             )}
 
@@ -441,7 +441,7 @@ export default function Navbar() {
                   <div className="absolute right-0 top-12 z-50 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
                     <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3.5 bg-slate-50">
                       <button type="button" onClick={() => fileInputRef.current?.click()}
-                        className="group relative h-10 w-10 shrink-0 rounded-full focus:outline-none" title="Đổi ảnh đại diện">
+                        className="group relative h-10 w-10 shrink-0 rounded-full focus:outline-none" title={lang === "ja" ? "プロフィール画像を変更" : "Đổi ảnh đại diện"}>
                         {currentUser.avatar ? (
                           <div className="h-10 w-10 overflow-hidden rounded-full ring-2 ring-blue-100">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -468,7 +468,7 @@ export default function Navbar() {
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
                       >
                         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-50 text-sm">📷</span>
-                        Đổi ảnh đại diện
+                        {lang === "ja" ? "プロフィール画像を変更" : "Đổi ảnh đại diện"}
                       </button>
 
                       {/* Góp ý trong dropdown */}
@@ -477,7 +477,7 @@ export default function Navbar() {
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-violet-50 hover:text-violet-700 transition"
                       >
                         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-50 text-sm">💌</span>
-                        Góp ý cải thiện
+                        {lang === "ja" ? "改善フィードバック" : "Góp ý cải thiện"}
                       </button>
 
                       <button
@@ -485,7 +485,7 @@ export default function Navbar() {
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
                       >
                         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-50 text-sm">🔒</span>
-                        Đổi mật khẩu
+                        {lang === "ja" ? "パスワード変更" : "Đổi mật khẩu"}
                         <svg className={"ml-auto h-3.5 w-3.5 text-slate-400 transition-transform " + (showPwForm ? "rotate-180" : "")} viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
                         </svg>
@@ -495,7 +495,7 @@ export default function Navbar() {
 
                     <div className="border-t border-slate-100 px-3 py-3 space-y-2">
                       <div className="flex items-center justify-between px-3">
-                        <span className="text-xs font-semibold text-slate-500">Ngôn ngữ</span>
+                        <span className="text-xs font-semibold text-slate-500">{lang === "ja" ? "言語" : "Ngôn ngữ"}</span>
                         <div className="flex items-center gap-0.5 rounded-full border border-slate-200 bg-slate-50 p-1">
                           <button onClick={() => setLang("vi")}
                             className={"rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide transition " + (lang === "vi" ? "bg-white shadow-sm text-slate-800" : "text-slate-400 hover:text-slate-600")}>VN</button>
@@ -587,7 +587,7 @@ export default function Navbar() {
                       onClick={() => { setMobileOpen(false); setShowFeedback(true) }}
                       className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-violet-700 hover:bg-violet-50 transition"
                     >
-                      💌 Góp ý cải thiện
+                      💌 {lang === "ja" ? "改善フィードバック" : "Góp ý cải thiện"}
                     </button>
                   )}
                 </div>
@@ -595,7 +595,7 @@ export default function Navbar() {
                 {currentUser && (
                   <div className="border-t border-slate-100 px-4 py-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-500">Ngôn ngữ</span>
+                      <span className="text-xs font-semibold text-slate-500">{lang === "ja" ? "言語" : "Ngôn ngữ"}</span>
                       <div className="flex items-center gap-0.5 rounded-full border border-slate-200 bg-slate-50 p-1">
                         <button onClick={() => setLang("vi")}
                           className={"rounded-full px-3 py-1 text-xs font-semibold tracking-wide transition " + (lang === "vi" ? "bg-white shadow-sm text-slate-800" : "text-slate-400")}>VN</button>
@@ -608,7 +608,7 @@ export default function Navbar() {
                       onClick={() => { setShowPwForm(v => !v); setPwError(""); setPwSuccess(false) }}
                       className="flex w-full items-center gap-2 rounded-full bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
                     >
-                      🔒 Đổi mật khẩu
+                      🔒 {lang === "ja" ? "パスワード変更" : "Đổi mật khẩu"}
                       <svg className={"ml-auto h-3.5 w-3.5 text-slate-400 transition-transform " + (showPwForm ? "rotate-180" : "")} viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
                       </svg>

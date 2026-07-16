@@ -90,7 +90,8 @@ function friendlyError(msg: string): string {
 
 export default function AdminUsersPage() {
   useAuthGuard()
-  const { currentUser, loadUser } = useStore()
+  const { currentUser, loadUser, lang } = useStore()
+  const L = (vi: string, ja: string) => lang === "ja" ? ja : vi
   const router = useRouter()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
@@ -429,12 +430,12 @@ export default function AdminUsersPage() {
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
                 <span className="text-2xl">🗑️</span>
               </div>
-              <h2 className="text-lg font-bold text-slate-950">Xóa tài khoản?</h2>
+              <h2 className="text-lg font-bold text-slate-950">{L("Xóa tài khoản?", "アカウントを削除しますか？")}</h2>
               <p className="mt-2 text-sm text-slate-500">
-                Bạn chắc chắn muốn xóa tài khoản của{" "}
+                {L("Bạn chắc chắn muốn xóa tài khoản của", "次のアカウントを削除しますか")}{" "}
                 <strong className="text-slate-800">{deletingProfile.full_name}</strong>?
               </p>
-              <p className="mt-1 text-xs text-red-500">Hành động này không thể hoàn tác!</p>
+              <p className="mt-1 text-xs text-red-500">{L("Hành động này không thể hoàn tác!", "この操作は取り消せません。")}</p>
             </div>
             <div className="mt-6 flex gap-3">
               <button
@@ -442,14 +443,14 @@ export default function AdminUsersPage() {
                 disabled={deleting}
                 className="flex-1 rounded-full bg-red-600 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50 transition"
               >
-                {deleting ? "Đang xóa..." : "🗑️ Xóa"}
+                {deleting ? L("Đang xóa...", "削除中...") : L("🗑️ Xóa", "🗑️ 削除")}
               </button>
               <button
                 onClick={() => setDeletingProfile(null)}
                 disabled={deleting}
                 className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
               >
-                Hủy
+                {L("Hủy", "キャンセル")}
               </button>
             </div>
           </div>
@@ -461,8 +462,8 @@ export default function AdminUsersPage() {
           <div className="w-full max-w-lg rounded-[2rem] border border-white/80 bg-white p-7 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg font-bold text-slate-950">➕ Tạo tài khoản mới</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Điền thông tin để tạo user mới</p>
+                <h2 className="text-lg font-bold text-slate-950">➕ {L("Tạo tài khoản mới", "新規アカウント作成")}</h2>
+                <p className="text-xs text-slate-400 mt-0.5">{L("Điền thông tin để tạo user mới", "新しいユーザー情報を入力してください")}</p>
               </div>
               <button onClick={() => { setShowCreate(false); setCreateError("") }} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
             </div>
@@ -470,7 +471,7 @@ export default function AdminUsersPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Họ tên *</label>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{L("Họ tên", "氏名")} *</label>
                   <input
                     value={newUser.full_name}
                     onChange={e => setNewUser(u => ({ ...u, full_name: e.target.value }))}
@@ -491,7 +492,7 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div className="col-span-2">
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Mật khẩu mặc định</label>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{L("Mật khẩu mặc định", "初期パスワード")}</label>
                   <input
                     value={newUser.password}
                     onChange={e => setNewUser(u => ({ ...u, password: e.target.value }))}
@@ -500,21 +501,21 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Vai trò</label>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{L("Vai trò", "権限")}</label>
                   <select
                     value={newUser.role}
                     onChange={e => setNewUser(u => ({ ...u, role: e.target.value }))}
                     className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   >
-                    <option value="employee">Nhân viên</option>
-                    <option value="manager">Quản lý</option>
-                    <option value="hr">HR</option>
-                    <option value="admin">Admin</option>
+                    <option value="employee">{L("Nhân viên", "社員")}</option>
+                    <option value="manager">{L("Quản lý", "管理職")}</option>
+                    <option value="hr">{L("HR", "人事")}</option>
+                    <option value="admin">{L("Admin", "管理者")}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Cấp bậc</label>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{L("Cấp bậc", "職位")}</label>
                   <select
                     value={newUser.level}
                     onChange={e => setNewUser(u => ({ ...u, level: e.target.value }))}
@@ -529,7 +530,7 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Văn phòng *</label>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{L("Văn phòng", "オフィス")} *</label>
                   <select
                     value={newUser.office}
                     onChange={e => setNewUser(u => ({ ...u, office: e.target.value }))}
@@ -541,13 +542,13 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Phòng ban</label>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{L("Phòng ban", "部署")}</label>
                   <select
                     value={newUser.department}
                     onChange={e => setNewUser(u => ({ ...u, department: e.target.value }))}
                     className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   >
-                    <option value="">Chọn phòng ban</option>
+                    <option value="">{L("Chọn phòng ban", "部署を選択")}</option>
                     {departments.map(dep => (
                       <option key={dep} value={dep}>
                         {dep}
@@ -557,7 +558,7 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div className="col-span-2">
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Chức vụ</label>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{L("Chức vụ", "役職名")}</label>
                   <input
                     value={newUser.position}
                     onChange={e => setNewUser(u => ({ ...u, position: e.target.value }))}
@@ -580,13 +581,13 @@ export default function AdminUsersPage() {
                 disabled={creating}
                 className="flex-1 rounded-full bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50 transition"
               >
-                {creating ? "Đang tạo..." : "✅ Tạo tài khoản"}
+                {creating ? L("Đang tạo...", "作成中...") : L("✅ Tạo tài khoản", "✅ アカウント作成")}
               </button>
               <button
                 onClick={() => { setShowCreate(false); setCreateError("") }}
                 className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
               >
-                Hủy
+                {L("Hủy", "キャンセル")}
               </button>
             </div>
           </div>
@@ -608,21 +609,21 @@ export default function AdminUsersPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Vai trò</label>
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{L("Vai trò", "権限")}</label>
                 <select
                   value={editRole}
                   onChange={e => setEditRole(e.target.value)}
                   className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
-                  <option value="employee">Nhân viên</option>
-                  <option value="manager">Quản lý</option>
-                  <option value="hr">HR</option>
-                  <option value="admin">Admin</option>
+                  <option value="employee">{L("Nhân viên", "社員")}</option>
+                  <option value="manager">{L("Quản lý", "管理職")}</option>
+                  <option value="hr">{L("HR", "人事")}</option>
+                  <option value="admin">{L("Admin", "管理者")}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Cấp bậc (Level)</label>
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{L("Cấp bậc (Level)", "職位 (Level)")}</label>
                 <select
                   value={editLevel}
                   onChange={e => setEditLevel(e.target.value)}
@@ -650,13 +651,13 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Phòng ban</label>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{L("Phòng ban", "部署")}</label>
                   <select
                     value={editDepartment}
                     onChange={e => setEditDepartment(e.target.value)}
                     className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   >
-                    <option value="">Chọn phòng ban</option>
+                    <option value="">{L("Chọn phòng ban", "部署を選択")}</option>
                     {departments.map(dep => (
                       <option key={dep} value={dep}>
                         {dep}
@@ -667,7 +668,7 @@ export default function AdminUsersPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Chức vụ</label>
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{L("Chức vụ", "役職名")}</label>
                 <input
                   value={editPosition}
                   onChange={e => setEditPosition(e.target.value)}
@@ -678,8 +679,8 @@ export default function AdminUsersPage() {
 
               <div>
                 <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">
-                  Ngân sách tùy chỉnh{" "}
-                  <span className="text-slate-400 normal-case font-normal">(để trống = dùng mặc định theo level)</span>
+                  {L("Ngân sách tùy chỉnh", "カスタム予算")}{" "}
+                  <span className="text-slate-400 normal-case font-normal">{L("(để trống = dùng mặc định theo level)", "（空欄の場合は職位の既定値）")}</span>
                 </label>
                 <input
                   type="number"
@@ -691,7 +692,7 @@ export default function AdminUsersPage() {
               </div>
 
               <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-                <span className="text-sm font-semibold text-slate-700">Tài khoản hoạt động</span>
+                <span className="text-sm font-semibold text-slate-700">{L("Tài khoản hoạt động", "アカウント有効")}</span>
                 <button
                   onClick={() => setEditActive(v => !v)}
                   className={"relative h-6 w-11 rounded-full transition-colors " + (editActive ? "bg-emerald-500" : "bg-slate-300")}
@@ -701,13 +702,13 @@ export default function AdminUsersPage() {
               </div>
 
               <div className="rounded-xl border border-dashed border-slate-200 px-4 py-3">
-                <p className="text-xs text-slate-500 mb-2">Đặt lại mật khẩu — gửi link qua email</p>
+                <p className="text-xs text-slate-500 mb-2">{L("Đặt lại mật khẩu — gửi link qua email", "パスワード再設定リンクをメール送信")}</p>
                 <button
                   onClick={() => sendPasswordReset(editingProfile.email)}
                   disabled={resetEmailSent === editingProfile.email}
                   className="rounded-full bg-amber-50 px-4 py-1.5 text-xs font-bold text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100 disabled:opacity-50 transition"
                 >
-                  {resetEmailSent === editingProfile.email ? "✅ Đã gửi" : "📧 Gửi email đặt lại MK"}
+                  {resetEmailSent === editingProfile.email ? L("✅ Đã gửi", "✅ 送信済み") : L("📧 Gửi email đặt lại MK", "📧 再設定メールを送信")}
                 </button>
               </div>
             </div>
@@ -718,13 +719,13 @@ export default function AdminUsersPage() {
                 disabled={editSaving}
                 className="flex-1 rounded-full bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {editSaving ? "Đang lưu..." : "💾 Lưu thay đổi"}
+                {editSaving ? L("Đang lưu...", "保存中...") : L("💾 Lưu thay đổi", "💾 変更を保存")}
               </button>
               <button
                 onClick={() => setEditingProfile(null)}
                 className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
               >
-                Đóng
+                {L("Đóng", "閉じる")}
               </button>
             </div>
           </div>
@@ -736,16 +737,16 @@ export default function AdminUsersPage() {
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div>
               <span className="inline-flex rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-purple-100">
-                ⚙️ Quản trị hệ thống
+                ⚙️ {L("Quản trị hệ thống", "システム管理")}
               </span>
-              <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">Quản lý người dùng</h1>
-              <p className="mt-1 text-sm text-slate-500">{filtered.length} / {profiles.length} tài khoản</p>
+              <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{L("Quản lý người dùng", "ユーザー管理")}</h1>
+              <p className="mt-1 text-sm text-slate-500">{filtered.length} / {profiles.length} {L("tài khoản", "アカウント")}</p>
             </div>
             <button
               onClick={() => { setShowCreate(true); setCreateError("") }}
               className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition flex items-center gap-2"
             >
-              ➕ Tạo user mới
+              ➕ {L("Tạo user mới", "新規ユーザー作成")}
             </button>
           </div>
         </div>
@@ -759,7 +760,7 @@ export default function AdminUsersPage() {
                     ? "bg-slate-800 text-white"
                     : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
                 )}>
-                {r === "all" ? "Tất cả" : ROLE_LABELS[r]}
+                {r === "all" ? L("Tất cả", "すべて") : (lang === "ja" ? ({employee:"社員",manager:"管理職",hr:"人事",admin:"管理者"} as Record<string,string>)[r] : ROLE_LABELS[r])}
                 <span className={"ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] " + (filterRole === r ? "bg-white/30" : "bg-slate-100")}>
                   {counts[r] ?? 0}
                 </span>
@@ -770,13 +771,13 @@ export default function AdminUsersPage() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Tìm theo tên, email, phòng ban..."
+            placeholder={L("Tìm theo tên, email, phòng ban...", "氏名・メール・部署で検索...")}
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 min-w-[260px]"
           />
         </div>
 
         {loading ? (
-          <div className="text-center py-16 text-slate-400">Đang tải...</div>
+          <div className="text-center py-16 text-slate-400">{L("Đang tải...", "読み込み中...")}</div>
         ) : (
           <div className="space-y-3">
             {filtered.map(p => (
@@ -790,7 +791,7 @@ export default function AdminUsersPage() {
                       <div className="font-bold text-slate-950 flex items-center gap-2">
                         {p.full_name}
                         {!p.is_active && (
-                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600 ring-1 ring-red-100">Đã vô hiệu</span>
+                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600 ring-1 ring-red-100">{L("Đã vô hiệu", "無効")}</span>
                         )}
                       </div>
                       <div className="text-xs text-slate-400">{p.email}</div>
@@ -799,7 +800,7 @@ export default function AdminUsersPage() {
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={"rounded-full px-3 py-1 text-xs font-bold " + (ROLE_COLORS[p.role] || "bg-slate-100 text-slate-600")}>
-                      {ROLE_LABELS[p.role] || p.role}
+                      {lang === "ja" ? ({employee:"社員",manager:"管理職",hr:"人事",admin:"管理者"} as Record<string,string>)[p.role] || p.role : ROLE_LABELS[p.role] || p.role}
                     </span>
                     {p.level && (
                       <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
@@ -813,14 +814,14 @@ export default function AdminUsersPage() {
                       onClick={() => openEdit(p)}
                       className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition"
                     >
-                      ✏️ Sửa
+                      ✏️ {L("Sửa", "編集")}
                     </button>
                     {p.id !== currentUser?.id && (
                       <button
                         onClick={() => setDeletingProfile(p)}
                         className="rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 transition"
                       >
-                        🗑️ Xóa
+                        🗑️ {L("Xóa", "削除")}
                       </button>
                     )}
                   </div>
