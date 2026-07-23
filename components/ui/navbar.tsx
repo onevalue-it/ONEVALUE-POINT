@@ -320,28 +320,58 @@ export default function Navbar() {
   const initials = currentUser?.full_name?.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() ?? ""
 
   const PwForm = (
-    <div className="mt-2 space-y-2">
-      <input
-        type="password" value={pwNew} onChange={e => setPwNew(e.target.value)}
-        placeholder={lang === "ja" ? "新しいパスワード（8文字以上）" : "Mật khẩu mới (≥8 ký tự)"}
-        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-      />
-      <input
-        type="password" value={pwConfirm} onChange={e => setPwConfirm(e.target.value)}
-        placeholder={lang === "ja" ? "新しいパスワードを再入力" : "Xác nhận mật khẩu mới"}
-        onKeyDown={e => e.key === "Enter" && handlePasswordChange()}
-        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-      />
+    <div className="mt-2 space-y-3">
+      <div>
+        <label htmlFor="new-password" className="mb-1 block text-xs font-semibold text-slate-600">
+          {lang === "ja" ? "新しいパスワード" : "Mật khẩu mới"}
+        </label>
+        <input
+          id="new-password"
+          name="new-password"
+          type="password"
+          autoComplete="new-password"
+          value={pwNew}
+          onChange={e => { setPwNew(e.target.value); setPwError("") }}
+          placeholder={lang === "ja" ? "8文字以上" : "Tối thiểu 8 ký tự"}
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="confirm-new-password" className="mb-1 block text-xs font-semibold text-slate-600">
+          {lang === "ja" ? "新しいパスワード（確認）" : "Xác nhận mật khẩu mới"}
+        </label>
+        <input
+          id="confirm-new-password"
+          name="confirm-new-password"
+          type="password"
+          autoComplete="new-password"
+          value={pwConfirm}
+          onChange={e => { setPwConfirm(e.target.value); setPwError("") }}
+          placeholder={lang === "ja" ? "同じパスワードを再入力" : "Nhập lại đúng mật khẩu phía trên"}
+          onKeyDown={e => e.key === "Enter" && handlePasswordChange()}
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      </div>
+
       {pwError && <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 ring-1 ring-red-100">{pwError}</p>}
       {pwSuccess && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">✓ {lang === "ja" ? "パスワードを変更しました！" : "Đổi mật khẩu thành công!"}</p>}
+
       <div className="flex gap-2">
-        <button onClick={handlePasswordChange} disabled={pwLoading}
-          className="flex-1 rounded-full bg-blue-600 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50">
+        <button
+          type="button"
+          onClick={handlePasswordChange}
+          disabled={pwLoading || !pwNew || !pwConfirm}
+          className="flex-1 rounded-full bg-blue-600 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+        >
           {pwLoading ? (lang === "ja" ? "保存中..." : "Đang lưu...") : (lang === "ja" ? "保存" : "Lưu")}
         </button>
-        <button onClick={() => { setShowPwForm(false); setPwNew(""); setPwConfirm(""); setPwError("") }}
-          className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
-          Huỷ
+        <button
+          type="button"
+          onClick={() => { setShowPwForm(false); setPwNew(""); setPwConfirm(""); setPwError(""); setPwSuccess(false) }}
+          className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+        >
+          {lang === "ja" ? "キャンセル" : "Hủy"}
         </button>
       </div>
     </div>
