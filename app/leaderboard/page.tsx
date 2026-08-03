@@ -96,6 +96,8 @@ export default function LeaderboardPage() {
   // Points by user from point_transactions (for time-filtered view)
   const [txPoints, setTxPoints] = useState<Record<string, number>>({})
   const [txLoading, setTxLoading] = useState(false)
+  const [exportingCsv, setExportingCsv] = useState(false)
+  const [exportError, setExportError] = useState("")
 
   const monthOptions = getMonthOptions()
   const half = getCurrentHalf()
@@ -185,6 +187,71 @@ export default function LeaderboardPage() {
     return `Năm ${new Date().getFullYear()}`
   }, [timeMode, selectedMonth])
 
+  async function handleExportCsv() {
+    try {
+      setExportingCsv(true)
+      setExportError("")
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
+      if (sessionError || !session?.access_token) {
+        throw new Error("Phiên đăng nhập không hợp lệ")
+      }
+
+      const params = new URLSearchParams({
+        month: selectedMonth,
+        office: filterOffice === "All" ? "all" : filterOffice,
+        department: filterDept === "All" ? "all" : filterDept,
+        level: filterLevel === "All" ? "all" : filterLevel,
+      })
+
+      const response = await fetch(
+        `/api/admin/export-rewards?${params.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({
+          error: "Không thể đọc phản hồi từ máy chủ",
+        }))
+
+        throw new Error(result.error || "Không thể xuất CSV")
+      }
+
+      const blob = await response.blob()
+      const contentDisposition = response.headers.get("Content-Disposition")
+      const fileNameMatch = contentDisposition?.match(/filename="([^"]+)"/)
+      const fileName =
+        fileNameMatch?.[1] ||
+        `OVPOINT_KhenThuong_${selectedMonth}.csv`
+
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = downloadUrl
+      anchor.download = fileName
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      window.URL.revokeObjectURL(downloadUrl)
+    } catch (error) {
+      setExportError(
+        error instanceof Error
+          ? error.message
+          : "Không thể xuất CSV"
+      )
+    } finally {
+      setExportingCsv(false)
+    }
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-white to-slate-50 text-slate-900">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -232,10 +299,37 @@ export default function LeaderboardPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 ring-1 ring-blue-100">
-                📅 {timeLabel}
-              </span>
+            <div className="flex flex-col items-start gap-2 md:items-end">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="rounded-full bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 ring-1 ring-blue-100">
+                  📅 {timeLabel}
+                </span>
+
+                {["admin", "hr"].includes(currentUser?.role || "") && (
+                  <button
+                    type="button"
+                    onClick={handleExportCsv}
+                    disabled={exportingCsv || timeMode !== "month"}
+                    title={
+                      timeMode !== "month"
+                        ? "Chọn chế độ Theo tháng để xuất CSV"
+                        : "Xuất báo cáo CSV theo tháng đang chọn"
+                    }
+                    className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span>⬇</span>
+                    <span>
+                      {exportingCsv ? "Đang xuất..." : "Export CSV"}
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {exportError && (
+                <div className="max-w-md rounded-xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 ring-1 ring-red-100">
+                  ❌ {exportError}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -377,13 +471,12 @@ export default function LeaderboardPage() {
           </div>
 
           <div className="relative overflow-x-auto">
-            <div className="grid min-w-[720px] grid-cols-8 border-b border-slate-100 px-6 py-3 text-xs font-bold uppercase tracking-wide text-slate-400">
+            <div className="grid min-w-[680px] grid-cols-7 border-b border-slate-100 px-6 py-3 text-xs font-bold uppercase tracking-wide text-slate-400">
               <div>Rank</div>
               <div className="col-span-2">Nhân viên</div>
               <div>Văn phòng</div>
               <div>Cấp bậc</div>
               <div>Badge</div>
-              <div>Tháng này</div>
               <div>{timeMode === "total" ? "Tổng pts" : timeLabel}</div>
             </div>
 
@@ -398,7 +491,7 @@ export default function LeaderboardPage() {
                 <a
                   key={e.id}
                   href={`/profile/${e.id}`}
-                  className={"grid min-w-[720px] grid-cols-8 items-center border-b border-slate-100 px-6 py-4 transition last:border-0 " + (
+                  className={"grid min-w-[680px] grid-cols-7 items-center border-b border-slate-100 px-6 py-4 transition last:border-0 " + (
                     isMe ? "bg-blue-50/70 hover:bg-blue-50" : "hover:bg-blue-50/40"
                   )}
                 >
@@ -441,7 +534,6 @@ export default function LeaderboardPage() {
                       {getBadge(e.points)}
                     </span>
                   </div>
-                  <div className="text-sm font-bold text-emerald-600">+{e.monthly_points}</div>
                   <div className="font-bold text-blue-700">{pts.toLocaleString()} pts</div>
                 </a>
               )
