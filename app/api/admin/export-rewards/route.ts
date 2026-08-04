@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import ExcelJS from "exceljs"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -55,11 +56,6 @@ function getSupabaseAdmin() {
   })
 }
 
-function escapeCsv(value: unknown): string {
-  const text = String(value ?? "")
-  return `"${text.replace(/"/g, '""')}"`
-}
-
 function getMonthRange(month: string) {
   if (!/^\d{4}-\d{2}$/.test(month)) {
     throw new Error("Tháng không hợp lệ")
@@ -82,7 +78,7 @@ function getMonthRange(month: string) {
   const nextMonth = String(nextMonthDate.getUTCMonth() + 1).padStart(2, "0")
   const end = `${nextYear}-${nextMonth}-01T00:00:00+07:00`
 
-  return { start, end }
+  return { start, end, year, monthNumber }
 }
 
 function formatRewardDate(createdAt: string): string {
@@ -145,7 +141,7 @@ export async function GET(request: NextRequest) {
     const office = searchParams.get("office") || "all"
     const department = searchParams.get("department") || "all"
     const level = searchParams.get("level") || "all"
-    const { start, end } = getMonthRange(month)
+    const { start, end, year, monthNumber } = getMonthRange(month)
 
     let profilesQuery = supabaseAdmin
       .from("profiles")
@@ -174,10 +170,7 @@ export async function GET(request: NextRequest) {
       profilesQuery = profilesQuery.eq("level", level)
     }
 
-    const {
-      data: profileData,
-      error: profilesError,
-    } = await profilesQuery
+    const { data: profileData, error: profilesError } = await profilesQuery
 
     if (profilesError) {
       throw new Error(profilesError.message)
@@ -192,15 +185,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    /*
-     * Dùng posts làm nguồn chính vì mỗi bài post chính là một lời khen.
-     * Cách cũ dùng point_transactions nên bị thiếu các bài cũ
-     * chưa có transaction tương ứng.
-     */
-    const {
-      data: postData,
-      error: postError,
-    } = await supabaseAdmin
+    const { data: postData, error: postError } = await supabaseAdmin
       .from("posts")
       .select(`
         id,
@@ -243,19 +228,14 @@ export async function GET(request: NextRequest) {
     for (const post of posts) {
       let receiver: ProfileRow | undefined
 
-      // Ưu tiên UUID vì chính xác nhất.
       if (post.to_user_id) {
         receiver = profileById.get(post.to_user_id)
       }
 
-      // Fallback cho dữ liệu cũ nếu thiếu UUID.
       if (!receiver && post.to_email) {
-        receiver = profileByEmail.get(
-          post.to_email.trim().toLowerCase()
-        )
+        receiver = profileByEmail.get(post.to_email.trim().toLowerCase())
       }
 
-      // Không ghép bằng tên để tránh nhầm người trùng tên.
       if (!receiver) continue
 
       const rewards = rewardsByUser.get(receiver.id) || []
@@ -286,22 +266,30 @@ export async function GET(request: NextRequest) {
 
     if (profilesWithPoints.length === 0) {
       return NextResponse.json(
-        {
-          error: "Không có nhân viên nào nhận điểm trong tháng đã chọn",
-        },
+        { error: "Không có nhân viên nào nhận điểm trong tháng đã chọn" },
         { status: 404 }
       )
     }
 
     const maximumPraiseCount = Math.max(
       0,
-      ...profilesWithPoints.map(profile => {
-        return rewardsByUser.get(profile.id)?.length || 0
-      })
+      ...profilesWithPoints.map(profile =>
+        rewardsByUser.get(profile.id)?.length || 0
+      )
     )
+
+    const workbook = new ExcelJS.Workbook()
+    workbook.creator = "OVPOINT"
+    workbook.created = new Date()
+
+    const worksheet = workbook.addWorksheet(`Tháng ${monthNumber}-${year}`, {
+      views: [{ state: "frozen", ySplit: 2 }],
+      properties: { defaultRowHeight: 20 },
+    })
 
     const headers = [
       "Họ tên",
+      "Email",
       "Phòng ban",
       "Văn phòng",
       "Tổng điểm",
@@ -312,7 +300,35 @@ export async function GET(request: NextRequest) {
       ),
     ]
 
-    const csvRows: string[][] = [headers]
+    worksheet.mergeCells(1, 1, 1, headers.length)
+    const titleCell = worksheet.getCell(1, 1)
+    titleCell.value = `OVPOINT - Báo cáo khen thưởng tháng ${String(
+      monthNumber
+    ).padStart(2, "0")}/${year}`
+    titleCell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 14 }
+    titleCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF17365D" },
+    }
+    titleCell.alignment = { horizontal: "center", vertical: "middle" }
+    worksheet.getRow(1).height = 28
+
+    const headerRow = worksheet.addRow(headers)
+    headerRow.height = 28
+    headerRow.eachCell(cell => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } }
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF1F4E78" },
+      }
+      cell.alignment = {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true,
+      }
+    })
 
     for (const profile of profilesWithPoints) {
       const rewards = rewardsByUser.get(profile.id) || []
@@ -338,39 +354,64 @@ export async function GET(request: NextRequest) {
         }
       )
 
-      csvRows.push([
+      const row = worksheet.addRow([
         profile.full_name,
+        profile.email || "",
         profile.department || "",
         profile.office || "",
-        String(totalPoints),
-        String(rewards.length),
+        totalPoints,
+        rewards.length,
         ...praiseColumns,
       ])
+
+      row.alignment = { vertical: "top", wrapText: true }
+      row.height = 72
+      row.getCell(5).numFmt = "#,##0"
+      row.getCell(6).numFmt = "#,##0"
     }
 
-    const csv =
-      "\uFEFF" +
-      csvRows
-        .map(row =>
-          row.map(cell => escapeCsv(cell)).join(",")
-        )
-        .join("\r\n")
+    worksheet.columns.forEach((column, index) => {
+      if (index === 0) column.width = 25
+      else if (index === 1) column.width = 32
+      else if (index === 2) column.width = 20
+      else if (index === 3) column.width = 14
+      else if (index === 4 || index === 5) column.width = 13
+      else column.width = 65
+    })
 
-    const fileName = `OVPOINT_KhenThuong_${month}.csv`
+    worksheet.autoFilter = {
+      from: { row: 2, column: 1 },
+      to: { row: 2, column: headers.length },
+    }
 
-    return new NextResponse(csv, {
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber <= 2) return
+
+      row.eachCell(cell => {
+        cell.border = {
+          bottom: {
+            style: "thin",
+            color: { argb: "FFD9E2F3" },
+          },
+        }
+      })
+    })
+
+    const output = await workbook.xlsx.writeBuffer()
+    const fileName = `OVPOINT_KhenThuong_${month}.xlsx`
+
+    return new NextResponse(new Uint8Array(output as ArrayBuffer), {
       status: 200,
       headers: {
-        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="${fileName}"`,
         "Cache-Control": "no-store",
       },
     })
   } catch (error) {
     const message =
-      error instanceof Error
-        ? error.message
-        : "Không thể xuất báo cáo"
+      error instanceof Error ? error.message : "Không thể xuất báo cáo"
 
     let status = 500
 

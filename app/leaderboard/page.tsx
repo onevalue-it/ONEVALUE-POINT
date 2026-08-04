@@ -96,7 +96,7 @@ export default function LeaderboardPage() {
   // Points by user from point_transactions (for time-filtered view)
   const [txPoints, setTxPoints] = useState<Record<string, number>>({})
   const [txLoading, setTxLoading] = useState(false)
-  const [exportingCsv, setExportingCsv] = useState(false)
+  const [exportingExcel, setExportingExcel] = useState(false)
   const [exportError, setExportError] = useState("")
 
   const monthOptions = getMonthOptions()
@@ -187,9 +187,9 @@ export default function LeaderboardPage() {
     return `Năm ${new Date().getFullYear()}`
   }, [timeMode, selectedMonth])
 
-  async function handleExportCsv() {
+  async function handleExportExcel() {
     try {
-      setExportingCsv(true)
+      setExportingExcel(true)
       setExportError("")
 
       const {
@@ -223,7 +223,7 @@ export default function LeaderboardPage() {
           error: "Không thể đọc phản hồi từ máy chủ",
         }))
 
-        throw new Error(result.error || "Không thể xuất CSV")
+        throw new Error(result.error || "Không thể xuất Excel")
       }
 
       const blob = await response.blob()
@@ -231,7 +231,7 @@ export default function LeaderboardPage() {
       const fileNameMatch = contentDisposition?.match(/filename="([^"]+)"/)
       const fileName =
         fileNameMatch?.[1] ||
-        `OVPOINT_KhenThuong_${selectedMonth}.csv`
+        `OVPOINT_KhenThuong_${selectedMonth}.xlsx`
 
       const downloadUrl = window.URL.createObjectURL(blob)
       const anchor = document.createElement("a")
@@ -245,10 +245,10 @@ export default function LeaderboardPage() {
       setExportError(
         error instanceof Error
           ? error.message
-          : "Không thể xuất CSV"
+          : "Không thể xuất Excel"
       )
     } finally {
-      setExportingCsv(false)
+      setExportingExcel(false)
     }
   }
 
@@ -308,18 +308,18 @@ export default function LeaderboardPage() {
                 {["admin", "hr"].includes(currentUser?.role || "") && (
                   <button
                     type="button"
-                    onClick={handleExportCsv}
-                    disabled={exportingCsv || timeMode !== "month"}
+                    onClick={handleExportExcel}
+                    disabled={exportingExcel || timeMode !== "month"}
                     title={
                       timeMode !== "month"
-                        ? "Chọn chế độ Theo tháng để xuất CSV"
-                        : "Xuất báo cáo CSV theo tháng đang chọn"
+                        ? "Chọn chế độ Theo tháng để xuất Excel"
+                        : "Xuất báo cáo Excel theo tháng đang chọn"
                     }
                     className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <span>⬇</span>
                     <span>
-                      {exportingCsv ? "Đang xuất..." : "Export CSV"}
+                      {exportingExcel ? "Đang xuất..." : "Export Excel"}
                     </span>
                   </button>
                 )}
