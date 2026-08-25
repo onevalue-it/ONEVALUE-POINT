@@ -4,6 +4,7 @@ import { useStore } from "@/lib/store"
 import Navbar from "@/components/ui/navbar"
 import { useAuthGuard } from "@/lib/useAuthGuard"
 import { useT } from "@/lib/useT"
+import { useLangText } from "@/lib/useLangText"
 import { supabase } from "@/lib/supabase"
 
 const categoryColor: Record<string, string> = {
@@ -32,6 +33,31 @@ const categoryBorder: Record<string, string> = {
 
 const ALL_REACTIONS = ["👏", "🔥", "⭐", "❤️", "💪", "🎨"]
 
+const CATEGORY_JA: Record<string, string> = {
+  "M&A Support": "M&Aサポート",
+  "M&A": "M&A",
+  "Translation": "翻訳",
+  "Creativity": "創造性",
+  "Fast Support": "迅速なサポート",
+  "Market Research": "市場調査",
+  "Leadership": "リーダーシップ",
+  "Sales Support": "営業支援",
+  "Operations": "業務支援",
+}
+
+function localizeTimeLabel(value: string, L: (vi: string, ja: string) => string): string {
+  if (!value) return value
+  if (value === "Just now") return L("Vừa xong", "たった今")
+  if (value === "Yesterday") return L("Hôm qua", "昨日")
+  let m = value.match(/^(\d+) min ago$/)
+  if (m) return L(`${m[1]} phút trước`, `${m[1]}分前`)
+  m = value.match(/^(\d+) hours ago$/)
+  if (m) return L(`${m[1]} giờ trước`, `${m[1]}時間前`)
+  m = value.match(/^(\d+) days ago$/)
+  if (m) return L(`${m[1]} ngày trước`, `${m[1]}日前`)
+  return value
+}
+
 function getInitials(name: string): string {
   return name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
 }
@@ -39,6 +65,7 @@ function getInitials(name: string): string {
 export default function FeedPage() {
   useAuthGuard()
   const t = useT()
+  const L = useLangText()
   const {
     posts, profiles, currentUser, addReaction, removeReaction,
     deletePost, editPost,
@@ -72,25 +99,51 @@ export default function FeedPage() {
   const [dbCategoryCounts, setDbCategoryCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
-    // Fetch real aggregate stats from DB (not limited to paginated posts)
-    supabase.from("posts").select("points, time, category", { count: "exact" })
+    // Fetch real aggregate stats from DB (not limited to paginated posts).
+    // NOTE: posts has `created_at`, not `time`; selecting the old non-existent
+    // `time` column made Supabase return an error and kept this sidebar at 0.
+    supabase.from("posts").select("points, category, created_at", { count: "exact" })
       .order("created_at", { ascending: false })
-      .then(({ data, count }) => {
+      .then(({ data, count, error }) => {
+        if (error) {
+          // Safe fallback to the already-loaded feed so the sidebar never stays blank.
+          const totalPts = posts.reduce((a, p) => a + (p.points || 0), 0)
+          const cats: Record<string, number> = {}
+          for (const p of posts) {
+            if (p.category) cats[p.category] = (cats[p.category] || 0) + 1
+          }
+          setFeedStats({
+            totalPosts: posts.length,
+            totalPts,
+            latestTime: posts[0]?.time || "-",
+          })
+          setDbCategoryCounts(cats)
+          return
+        }
+
         const rows = data || []
         const totalPts = rows.reduce((a: number, p: any) => a + (p.points || 0), 0)
+        const latestCreatedAt = rows[0]?.created_at as string | undefined
+        const latestTime = latestCreatedAt
+          ? new Date(latestCreatedAt).toLocaleString(L("vi-VN", "ja-JP"), {
+              year: "numeric", month: "2-digit", day: "2-digit",
+              hour: "2-digit", minute: "2-digit",
+            })
+          : "-"
+
         setFeedStats({
-          totalPosts: count || 0,
+          totalPosts: count ?? rows.length,
           totalPts,
-          latestTime: rows[0]?.time || "-",
+          latestTime,
         })
-        // Category counts from full data
+
         const cats: Record<string, number> = {}
         for (const p of rows) {
           if (p.category) cats[p.category] = (cats[p.category] || 0) + 1
         }
         setDbCategoryCounts(cats)
       })
-  }, [])
+  }, [posts.length])
 
   useEffect(() => {
     Promise.all([loadUser(), loadProfiles(), loadPosts(true), loadMyReactions()]).finally(() => setIsLoading(false))
@@ -228,7 +281,7 @@ export default function FeedPage() {
                     : "bg-white text-slate-600 ring-slate-200 hover:bg-blue-50 hover:text-blue-700"
                 )}
               >
-                {cat} ({dbCategoryCounts[cat] || 0})
+                {L(cat, CATEGORY_JA[cat] || cat)} ({dbCategoryCounts[cat] || 0})
               </button>
             ))}
           </div>
@@ -345,11 +398,11 @@ export default function FeedPage() {
                               <button
                                 onClick={() => { setEditingId(p.id); setEditTitle(p.title); setEditMsg(p.message); setPostMenu(null) }}
                                 className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700"
-                              >✏️ Sửa</button>
+                              >{L("Sửa", "編集")}</button>
                               <button
                                 onClick={() => { setDeleteConfirmId(p.id); setPostMenu(null) }}
                                 className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
-                              >🗑️ Xóa</button>
+                              >{L("Xóa", "削除")}</button>
                             </div>
                           )}
                         </div>
@@ -363,39 +416,39 @@ export default function FeedPage() {
                           value={editTitle}
                           onChange={e => setEditTitle(e.target.value)}
                           className="w-full rounded-xl border border-blue-200 px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-300"
-                          placeholder="Tiêu đề"
+                          placeholder={L("Tiêu đề", "タイトル")}
                         />
                         <textarea
                           value={editMsg}
                           onChange={e => setEditMsg(e.target.value)}
                           rows={3}
                           className="w-full resize-none rounded-xl border border-blue-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                          placeholder="Nội dung"
+                          placeholder={L("Nội dung", "内容")}
                         />
                         <div className="flex gap-2">
                           <button
                             onClick={async () => { setEditSaving(true); await editPost(p.id, editTitle, editMsg); setEditSaving(false); setEditingId(null) }}
                             disabled={editSaving}
                             className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
-                          >{editSaving ? "Đang lưu..." : "💾 Lưu"}</button>
+                          >{editSaving ? L("Đang lưu...", "保存中...") : L("💾 Lưu", "💾 保存")}</button>
                           <button
                             onClick={() => setEditingId(null)}
                             className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                          >Huỷ</button>
+                          >{L("Huỷ", "キャンセル")}</button>
                         </div>
                       </div>
                     ) : deleteConfirmId === p.id ? (
                       <div className="mt-3 rounded-2xl bg-red-50 px-4 py-3 ring-1 ring-red-100">
-                        <p className="text-sm font-semibold text-red-700">Xóa bài này? Hành động không thể hoàn tác.</p>
+                        <p className="text-sm font-semibold text-red-700">{L("Xóa bài này? Hành động không thể hoàn tác.", "この投稿を削除しますか？この操作は元に戻せません。")}</p>
                         <div className="mt-2 flex gap-2">
                           <button
                             onClick={async () => { await deletePost(p.id); setDeleteConfirmId(null) }}
                             className="rounded-full bg-red-500 px-4 py-1.5 text-xs font-bold text-white hover:bg-red-600"
-                          >Xóa</button>
+                          >{L("Xóa", "削除")}</button>
                           <button
                             onClick={() => setDeleteConfirmId(null)}
                             className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                          >Huỷ</button>
+                          >{L("Huỷ", "キャンセル")}</button>
                         </div>
                       </div>
                     ) : (
@@ -410,14 +463,14 @@ export default function FeedPage() {
                     {/* Tags row */}
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                       <span className={"rounded-full px-3 py-1 text-xs font-bold ring-1 " + (categoryColor[p.category] || "bg-slate-50 text-slate-600 ring-slate-200")}>
-                        {p.category}
+                        {L(p.category, CATEGORY_JA[p.category] || p.category)}
                       </span>
                       {p.companyValueTitle && (
                         <span className="rounded-full bg-gradient-to-r from-purple-50 to-violet-50 px-3 py-1 text-xs font-bold text-purple-700 ring-1 ring-purple-200">
                           {p.companyValueTitle}
                         </span>
                       )}
-                      <span className="ml-auto text-xs text-slate-400">{p.time}</span>
+                      <span className="ml-auto text-xs text-slate-400">{localizeTimeLabel(p.time, L)}</span>
                     </div>
 
                     {/* Reactions */}
@@ -541,7 +594,7 @@ export default function FeedPage() {
                           onClick={() => setFilterCategory(filterCategory === cat ? "" : cat)}
                           className={"font-semibold transition hover:text-blue-700 " + (filterCategory === cat ? "text-blue-600" : "text-slate-700")}
                         >
-                          {cat}
+                          {L(cat, CATEGORY_JA[cat] || cat)}
                         </button>
                         <span className="text-slate-400">{count}</span>
                       </div>

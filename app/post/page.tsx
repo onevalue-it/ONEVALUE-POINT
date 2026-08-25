@@ -15,6 +15,44 @@ const categories = [
 ]
 const pointOptions = [10, 20, 30, 50, 100]
 
+const CATEGORY_JA: Record<string, string> = {
+  "M&A": "M&A",
+  "Market Research": "市場調査",
+  "Fast Support": "迅速なサポート",
+  "Translation": "翻訳",
+  "Leadership": "リーダーシップ",
+  "Creativity": "創造性",
+  "Sales Support": "営業支援",
+  "Operations": "業務支援",
+}
+
+
+const DEPARTMENT_JA: Record<string, string> = {
+  "BC": "事業コンサルティング",
+  "Ban giám đốc": "経営陣",
+  "HCNS": "人事・総務",
+  "KDTM": "商社事業",
+  "Kế toán": "経理",
+  "Legal": "法務",
+  "M&A": "M&A",
+  "MR": "市場調査",
+  "Marketing": "マーケティング",
+  "PMI": "PMI",
+}
+
+const COMPANY_VALUE_JA: Record<string, { title: string; description: string }> = {
+  "Referral": { title: "人材紹介", description: "会社への優秀な人材の紹介・採用につながる貢献" },
+  "Branding": { title: "ブランディング", description: "会社やサービスの認知・信頼・ブランド価値の向上につながる貢献" },
+  "Engagement": { title: "エンゲージメント", description: "チームの一体感、協働、社内コミュニケーションの向上につながる貢献" },
+  "Innovation": { title: "イノベーション", description: "新しいアイデア、仕組み、改善案を生み出し、業務やサービスを前進させる貢献" },
+  "Cost Saving": { title: "コスト削減", description: "無駄の削減や効率化により、会社のコスト削減につながる貢献" },
+  "Workplace Care": { title: "職場環境への配慮", description: "働きやすい職場づくり、メンバーへの気配り、安全・快適性の向上につながる貢献" },
+  "Ownership": { title: "オーナーシップ", description: "当事者意識を持ち、課題を自ら引き受けて最後までやり切る貢献" },
+  "Retention Support": { title: "定着支援", description: "メンバーの定着、モチベーション維持、離職防止につながる支援" },
+  "Onboarding Support": { title: "オンボーディング支援", description: "新しいメンバーが早期に職場や業務へ適応できるようにする支援" },
+  "Efficiency": { title: "業務効率化", description: "時間短縮、手順改善、自動化などにより生産性を高める貢献" },
+}
+
 
 const POINT_GUIDE = [
   {
@@ -267,7 +305,7 @@ export default function PostPage() {
                           {/* Info */}
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-bold text-slate-900 truncate">{r.profile.full_name}</div>
-                            <div className="text-xs text-slate-500">{r.profile.office} · {r.profile.department}</div>
+                            <div className="text-xs text-slate-500">{r.profile.office} · {L(r.profile.department, DEPARTMENT_JA[r.profile.department] || r.profile.department)}</div>
                           </div>
                           {/* Points badge */}
                           <div className="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-700">
@@ -360,7 +398,7 @@ export default function PostPage() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-bold text-slate-900 truncate">{p.full_name}</div>
-                                <div className="text-xs text-slate-500 truncate">{p.office} · {p.department}</div>
+                                <div className="text-xs text-slate-500 truncate">{p.office} · {L(p.department, DEPARTMENT_JA[p.department] || p.department)}</div>
                               </div>
                               {already
                                 ? <span className="text-xs text-slate-400 shrink-0">{L("Đã chọn ✔", "選択済み ✔")}</span>
@@ -422,7 +460,7 @@ export default function PostPage() {
                 >
                   <option value="">{t.post_value_ph}</option>
                   {companyValues.map(v => (
-                    <option key={v.id} value={v.id}>{v.icon} {v.title}</option>
+                    <option key={v.id} value={v.id}>{v.icon} {L(v.title, COMPANY_VALUE_JA[v.title]?.title || v.title)}</option>
                   ))}
                 </select>
               </div>
@@ -476,14 +514,14 @@ export default function PostPage() {
                         )}
                       >
                         <span className="text-base">{v.icon}</span>
-                        <span className="flex-1">{v.title}</span>
+                        <span className="flex-1">{L(v.title, COMPANY_VALUE_JA[v.title]?.title || v.title)}</span>
                         {selected && <span className="text-blue-500">✔</span>}
                         <span className={"text-xs text-slate-400 transition-transform " + (expanded ? "rotate-180" : "")}>⌄</span>
                       </button>
 
                       {expanded && (
                         <div className="rounded-2xl bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600 ring-1 ring-slate-200">
-                          {v.description}
+                          {L(v.description, COMPANY_VALUE_JA[v.title]?.description || v.description)}
                         </div>
                       )}
                     </div>

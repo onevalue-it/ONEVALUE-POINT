@@ -15,6 +15,20 @@ const badgeColor: Record<string, string> = {
   Bronze:   "text-orange-700 bg-orange-50 ring-orange-100",
 }
 
+
+const DEPARTMENT_JA: Record<string, string> = {
+  "BC": "事業コンサルティング",
+  "Ban giám đốc": "経営陣",
+  "HCNS": "人事・総務",
+  "KDTM": "商社事業",
+  "Kế toán": "経理",
+  "Legal": "法務",
+  "M&A": "M&A",
+  "MR": "市場調査",
+  "Marketing": "マーケティング",
+  "PMI": "PMI",
+}
+
 const LEVEL_LABELS: Record<string, string> = {
   ceo: "CEO",
   division_director: "COO/Division Lead/Director",
@@ -33,6 +47,25 @@ const LEVEL_LABELS: Record<string, string> = {
   senior: "Senior",
   staff: "Staff/Junior",
   intern: "Long term Intern / Part-time",
+}
+
+
+const LEVEL_JA: Record<string, string> = {
+  ceo: "CEO",
+  division_director: "COO／事業部長／ディレクター",
+  senior_manager: "シニアマネージャー",
+  project_manager: "プロジェクトマネージャー",
+  assistant_pm: "アシスタントプロジェクトマネージャー",
+  senior_team_leader: "シニアチームリーダー",
+  team_leader: "チームリーダー",
+  senior_ba: "シニアBA",
+  junior_ba: "ジュニアBA",
+  director: "ディレクター／部門長",
+  manager: "マネージャー",
+  pm: "PM／チームリーダー",
+  senior: "シニア",
+  staff: "スタッフ／ジュニア",
+  intern: "長期インターン／パートタイム",
 }
 
 function getBadge(points: number): string {
@@ -73,7 +106,8 @@ function getMonthOptions() {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     opts.push({
       value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-      label: d.toLocaleDateString("vi-VN", { month: "long", year: "numeric" }),
+      viLabel: d.toLocaleDateString("vi-VN", { month: "long", year: "numeric" }),
+      jaLabel: `${d.getFullYear()}年${d.getMonth() + 1}月`,
     })
   }
   return opts
@@ -184,7 +218,10 @@ export default function LeaderboardPage() {
   // Time label
   const timeLabel = useMemo(() => {
     if (timeMode === "total") return L("Tất cả thời gian", "全期間")
-    if (timeMode === "month") return monthOptions.find(o => o.value === selectedMonth)?.label || ""
+    if (timeMode === "month") {
+      const o = monthOptions.find(o => o.value === selectedMonth)
+      return o ? L(o.viLabel, o.jaLabel) : ""
+    }
     if (timeMode === "half") return half.label
     return L(`Năm ${new Date().getFullYear()}`, `${new Date().getFullYear()}年`)
   }, [timeMode, selectedMonth])
@@ -200,7 +237,7 @@ export default function LeaderboardPage() {
       } = await supabase.auth.getSession()
 
       if (sessionError || !session?.access_token) {
-        throw new Error("Phiên đăng nhập không hợp lệ")
+        throw new Error(L("Phiên đăng nhập không hợp lệ", "ログインセッションが無効です"))
       }
 
       const params = new URLSearchParams({
@@ -222,10 +259,10 @@ export default function LeaderboardPage() {
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({
-          error: "Không thể đọc phản hồi từ máy chủ",
+          error: L("Không thể đọc phản hồi từ máy chủ", "サーバーからの応答を読み取れません"),
         }))
 
-        throw new Error(result.error || "Không thể xuất Excel")
+        throw new Error(result.error || L("Không thể xuất Excel", "Excelを出力できません"))
       }
 
       const blob = await response.blob()
@@ -247,7 +284,7 @@ export default function LeaderboardPage() {
       setExportError(
         error instanceof Error
           ? error.message
-          : "Không thể xuất Excel"
+          : L("Không thể xuất Excel", "Excelを出力できません")
       )
     } finally {
       setExportingExcel(false)
@@ -368,7 +405,7 @@ export default function LeaderboardPage() {
                   className="mt-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
                   {monthOptions.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+                    <option key={o.value} value={o.value}>{L(o.viLabel, o.jaLabel)}</option>
                   ))}
                 </select>
               )}
@@ -400,7 +437,7 @@ export default function LeaderboardPage() {
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 {departments.map(d => (
-                  <option key={d} value={d}>{d === "All" ? L("Tất cả phòng ban", "すべての部署") : d}</option>
+                  <option key={d} value={d}>{d === "All" ? L("Tất cả phòng ban", "すべての部署") : L(d, DEPARTMENT_JA[d] || d)}</option>
                 ))}
               </select>
             </div>
@@ -415,7 +452,7 @@ export default function LeaderboardPage() {
               >
                 <option value="All">{L("Tất cả cấp bậc", "すべての役職")}</option>
                 {Object.entries(LEVEL_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
+                  <option key={k} value={k}>{L(v, LEVEL_JA[k] || v)}</option>
                 ))}
               </select>
             </div>
@@ -442,7 +479,7 @@ export default function LeaderboardPage() {
                   )}
                   <div className="mb-2 text-3xl">{i === 1 ? "🥇" : i === 0 ? "🥈" : "🥉"}</div>
                   <div className="text-lg font-bold text-slate-950">{e.full_name}</div>
-                  <div className="mt-1 text-xs text-slate-500">{e.office} · {e.department}</div>
+                  <div className="mt-1 text-xs text-slate-500">{e.office} · {e.department ? L(e.department, DEPARTMENT_JA[e.department] || e.department) : "-"}</div>
                   <div className="mt-4 text-3xl font-bold text-blue-700">{getPoints(e).toLocaleString()}</div>
                   <div className="text-xs text-slate-400">pts · {timeLabel}</div>
                   <span className={"mt-3 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 " + badgeColor[getBadge(e.points)]}>
@@ -467,8 +504,8 @@ export default function LeaderboardPage() {
             <p className="mt-1 text-sm text-slate-500">
               {filtered.length} {L("thành viên", "名")} · {timeLabel}
               {filterOffice !== "All" && ` · ${filterOffice}`}
-              {filterDept !== "All" && ` · ${filterDept}`}
-              {filterLevel !== "All" && ` · ${LEVEL_LABELS[filterLevel]}`}
+              {filterDept !== "All" && ` · ${L(filterDept, DEPARTMENT_JA[filterDept] || filterDept)}`}
+              {filterLevel !== "All" && ` · ${L(LEVEL_LABELS[filterLevel], LEVEL_JA[filterLevel] || LEVEL_LABELS[filterLevel])}`}
             </p>
           </div>
 
@@ -520,7 +557,7 @@ export default function LeaderboardPage() {
                         <span className="text-sm font-bold text-slate-950">{e.full_name}</span>
                         {isMe && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">{L("Bạn", "あなた")}</span>}
                       </div>
-                      <div className="text-xs text-slate-500">{e.department}</div>
+                      <div className="text-xs text-slate-500">{e.department ? L(e.department, DEPARTMENT_JA[e.department] || e.department) : "-"}</div>
                     </div>
                   </div>
                   <div>
@@ -529,7 +566,7 @@ export default function LeaderboardPage() {
                     </span>
                   </div>
                   <div className="text-xs text-slate-500">
-                    {LEVEL_LABELS[(e as any).level] || "-"}
+                    {(e as any).level ? L(LEVEL_LABELS[(e as any).level] || (e as any).level, LEVEL_JA[(e as any).level] || LEVEL_LABELS[(e as any).level] || (e as any).level) : "-"}
                   </div>
                   <div>
                     <span className={"rounded-full px-2.5 py-1 text-xs font-bold ring-1 " + badgeColor[getBadge(e.points)]}>
