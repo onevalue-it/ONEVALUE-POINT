@@ -242,7 +242,7 @@ export default function EvaluationListPage() {
                     <span className="text-xs text-slate-400">{new Date(ev.created_at).toLocaleDateString(lang === "ja" ? "ja-JP" : "vi-VN")}</span>
                     <button onClick={() => router.push(`/evaluation/${ev.id}`)}
                       className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-100 transition">
-                      Xem chi tiết →
+                      {L("Xem chi tiết →", "詳細を見る →")}
                     </button>
                   </div>
                 </div>

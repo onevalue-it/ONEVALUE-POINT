@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { useAuthGuard } from "@/lib/useAuthGuard"
+import { useLangText } from "@/lib/useLangText"
 
 const STEPS = ["Thông tin", "Mục tiêu", "Kỹ năng", "Thái độ", "Nhận xét"]
 
@@ -31,8 +32,14 @@ export default function NewEvaluationPage() {
   useAuthGuard()
   const { currentUser, loadUser, profiles, loadProfiles } = useStore()
   const router = useRouter()
+  const L = useLangText()
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
+  const stepLabels = [L("Thông tin", "基本情報"), L("Mục tiêu", "目標"), L("Kỹ năng", "スキル"), L("Thái độ", "勤務姿勢"), L("Nhận xét", "総合コメント")]
+  const skillLabels: Record<string, string> = {
+    skill_1: L("Tư duy Logic", "論理的思考"), skill_2: L("Giải quyết vấn đề", "問題解決力"), skill_3: L("Chất lượng output", "アウトプット品質"), skill_4: L("Tuân thủ deadline", "期限遵守"), skill_5: L("Horenso", "報連相"), skill_6: L("Tốc độ phản hồi", "レスポンス速度"), skill_7: L("Kỹ năng thuyết trình", "プレゼンテーション力"), skill_8: L("Hợp tác nhóm", "チームワーク"), skill_9: L("Kiến thức ngành", "業界知識"), skill_10: L("Tự phát triển", "自己成長"),
+  }
+  const attitudeLabels: Record<string, string> = { attitude_1: L("Tuân thủ quy định & văn hóa công ty", "社内規定・企業文化の遵守"), attitude_2: L("Đi làm đúng giờ", "時間厳守"), attitude_3: L("Ý thức gắn bó & đóng góp cho công ty", "会社へのコミットメント・貢献意識") }
 
   // Step 1 - Info
   const [employeeId, setEmployeeId] = useState("")
@@ -132,7 +139,7 @@ export default function NewEvaluationPage() {
     const { error } = await supabase.from("evaluations").insert(payload)
     setSaving(false)
     if (!error) router.push("/evaluation")
-    else alert("Lỗi khi lưu: " + error.message)
+    else alert(L("Lỗi khi lưu: ", "保存エラー: ") + error.message)
   }
 
   return (
@@ -142,7 +149,7 @@ export default function NewEvaluationPage() {
 
         {/* Progress Steps */}
         <div className="flex items-center justify-between mb-8">
-          {STEPS.map((s, i) => (
+          {stepLabels.map((s, i) => (
             <div key={i} className="flex items-center">
               <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold
                 ${i < step ? "bg-emerald-500 text-white" : i === step ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500"}`}>
@@ -159,12 +166,12 @@ export default function NewEvaluationPage() {
           {/* STEP 0 - Thông tin */}
           {step === 0 && (
             <div className="space-y-5">
-              <h2 className="text-xl font-bold text-slate-900">Thông tin đánh giá</h2>
+              <h2 className="text-xl font-bold text-slate-900">{L("Thông tin đánh giá", "評価基本情報")}</h2>
               <div>
-                <label className="text-sm font-semibold text-slate-700">Nhân viên được đánh giá *</label>
+                <label className="text-sm font-semibold text-slate-700">{L("Nhân viên được đánh giá", "評価対象者")} *</label>
                 <select value={employeeId} onChange={e => setEmployeeId(e.target.value)}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                  <option value="">-- Chọn nhân viên --</option>
+                  <option value="">-- {L("Chọn nhân viên", "社員を選択")} --</option>
                   {employees.map(p => (
                     <option key={p.id} value={p.id}>{p.full_name} — {p.department}</option>
                   ))}
@@ -172,24 +179,24 @@ export default function NewEvaluationPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-semibold text-slate-700">Kỳ đánh giá</label>
+                  <label className="text-sm font-semibold text-slate-700">{L("Kỳ đánh giá", "評価期間")}</label>
                   <input value={period} onChange={e => setPeriod(e.target.value)}
                     className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-slate-700">Ngày đánh giá</label>
+                  <label className="text-sm font-semibold text-slate-700">{L("Ngày đánh giá", "評価日")}</label>
                   <input type="date" value={evalDate} onChange={e => setEvalDate(e.target.value)}
                     className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                 </div>
               </div>
               <div>
-                <label className="text-sm font-semibold text-slate-700">Loại đánh giá</label>
+                <label className="text-sm font-semibold text-slate-700">{L("Loại đánh giá", "評価種別")}</label>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {[
-                    { v: "periodic", l: "Định kỳ 6 tháng" },
-                    { v: "probation", l: "Thử việc" },
-                    { v: "contract_change", l: "Thay đổi hợp đồng" },
-                    { v: "salary_review", l: "Tăng lương không định kỳ" },
+                    { v: "periodic", l: L("Định kỳ 6 tháng", "6か月定期評価") },
+                    { v: "probation", l: L("Thử việc", "試用期間評価") },
+                    { v: "contract_change", l: L("Thay đổi hợp đồng", "契約変更時評価") },
+                    { v: "salary_review", l: L("Tăng lương không định kỳ", "臨時昇給評価") },
                   ].map(opt => (
                     <button key={opt.v} onClick={() => setEvalType(opt.v)}
                       className={`rounded-xl px-3 py-2 text-sm font-medium border transition
@@ -202,7 +209,7 @@ export default function NewEvaluationPage() {
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="hasSub" checked={hasSubordinates} onChange={e => setHasSubordinates(e.target.checked)}
                   className="h-4 w-4 rounded" />
-                <label htmlFor="hasSub" className="text-sm text-slate-700">Có quản lý cấp dưới (Senior BA trở lên)?</label>
+                <label htmlFor="hasSub" className="text-sm text-slate-700">{L("Có quản lý cấp dưới (Senior BA trở lên)?", "部下のマネジメント経験がありますか（Senior BA以上）？")}</label>
               </div>
             </div>
           )}
@@ -210,35 +217,35 @@ export default function NewEvaluationPage() {
           {/* STEP 1 - Mục tiêu */}
           {step === 1 && (
             <div className="space-y-5">
-              <h2 className="text-xl font-bold text-slate-900">I. Mục tiêu công việc (70%)</h2>
-              <p className="text-xs text-slate-500">Điền tối đa 6 mục tiêu. Tổng tỷ trọng = 1.0</p>
+              <h2 className="text-xl font-bold text-slate-900">I. {L("Mục tiêu công việc", "業務目標")} (70%)</h2>
+              <p className="text-xs text-slate-500">{L("Điền tối đa 6 mục tiêu. Tổng tỷ trọng = 1.0", "最大6つの目標を入力してください。ウェイト合計 = 1.0")}</p>
               {goals.map((g, i) => (
                 <div key={i} className="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-blue-700">Mục tiêu {i + 1}</span>
-                    <span className="text-xs text-slate-400">Tỷ trọng: {(g.weight * 100).toFixed(0)}%</span>
+                    <span className="text-sm font-bold text-blue-700">{L("Mục tiêu", "目標")} {i + 1}</span>
+                    <span className="text-xs text-slate-400">{L("Tỷ trọng", "ウェイト")}: {(g.weight * 100).toFixed(0)}%</span>
                   </div>
-                  <input placeholder="Tên mục tiêu" value={g.name}
+                  <input placeholder={L("Tên mục tiêu", "目標名")} value={g.name}
                     onChange={e => setGoals(goals.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                  <textarea placeholder="Kết quả thực tế" value={g.result} rows={2}
+                  <textarea placeholder={L("Kết quả thực tế", "実績・結果")} value={g.result} rows={2}
                     onChange={e => setGoals(goals.map((x, j) => j === i ? { ...x, result: e.target.value } : x))}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-slate-500">Tự đánh giá (1-5)</label>
+                      <label className="text-xs text-slate-500">{L("Tự đánh giá", "自己評価")} (1-5)</label>
                       <select value={g.self_score}
                         onChange={e => setGoals(goals.map((x, j) => j === i ? { ...x, self_score: Number(e.target.value) } : x))}
                         className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? "-- Chọn --" : n}</option>)}
+                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? `-- ${L("Chọn", "選択")} --` : n}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs text-slate-500">Quản lý đánh giá (1-5)</label>
+                      <label className="text-xs text-slate-500">{L("Quản lý đánh giá", "上司評価")} (1-5)</label>
                       <select value={g.mgr_score}
                         onChange={e => setGoals(goals.map((x, j) => j === i ? { ...x, mgr_score: Number(e.target.value) } : x))}
                         className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? "-- Chọn --" : n}</option>)}
+                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? `-- ${L("Chọn", "選択")} --` : n}</option>)}
                       </select>
                     </div>
                   </div>
@@ -250,31 +257,31 @@ export default function NewEvaluationPage() {
           {/* STEP 2 - Kỹ năng */}
           {step === 2 && (
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-slate-900">II.A. Kỹ năng làm việc</h2>
+              <h2 className="text-xl font-bold text-slate-900">II.A. {L("Kỹ năng làm việc", "業務スキル")}</h2>
               {skillsA.map((s, i) => (
                 <div key={i} className="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm font-semibold text-slate-800">{i + 1}. {s.label}</span>
-                    <span className="text-xs text-slate-400">Hệ số: {s.weight}</span>
+                    <span className="text-sm font-semibold text-slate-800">{i + 1}. {skillLabels[s.id] || s.label}</span>
+                    <span className="text-xs text-slate-400">{L("Hệ số", "係数")}: {s.weight}</span>
                   </div>
-                  <textarea placeholder="Nhận xét của quản lý" value={s.comment} rows={2}
+                  <textarea placeholder={L("Nhận xét của quản lý", "上司コメント")} value={s.comment} rows={2}
                     onChange={e => setSkillsA(skillsA.map((x, j) => j === i ? { ...x, comment: e.target.value } : x))}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-slate-500">Tự đánh giá (1-5)</label>
+                      <label className="text-xs text-slate-500">{L("Tự đánh giá", "自己評価")} (1-5)</label>
                       <select value={s.self_score}
                         onChange={e => setSkillsA(skillsA.map((x, j) => j === i ? { ...x, self_score: Number(e.target.value) } : x))}
                         className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? "-- Chọn --" : n}</option>)}
+                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? `-- ${L("Chọn", "選択")} --` : n}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs text-slate-500">Quản lý đánh giá (1-5)</label>
+                      <label className="text-xs text-slate-500">{L("Quản lý đánh giá", "上司評価")} (1-5)</label>
                       <select value={s.mgr_score}
                         onChange={e => setSkillsA(skillsA.map((x, j) => j === i ? { ...x, mgr_score: Number(e.target.value) } : x))}
                         className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? "-- Chọn --" : n}</option>)}
+                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? `-- ${L("Chọn", "選択")} --` : n}</option>)}
                       </select>
                     </div>
                   </div>
@@ -286,31 +293,31 @@ export default function NewEvaluationPage() {
           {/* STEP 3 - Thái độ */}
           {step === 3 && (
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-slate-900">III. Thái độ làm việc</h2>
+              <h2 className="text-xl font-bold text-slate-900">III. {L("Thái độ làm việc", "勤務姿勢")}</h2>
               {attitudes.map((a, i) => (
                 <div key={i} className="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm font-semibold text-slate-800">{i + 1}. {a.label}</span>
-                    <span className="text-xs text-slate-400">Hệ số: {a.weight}</span>
+                    <span className="text-sm font-semibold text-slate-800">{i + 1}. {attitudeLabels[a.id] || a.label}</span>
+                    <span className="text-xs text-slate-400">{L("Hệ số", "係数")}: {a.weight}</span>
                   </div>
-                  <textarea placeholder="Nhận xét" value={a.comment} rows={2}
+                  <textarea placeholder={L("Nhận xét", "コメント")} value={a.comment} rows={2}
                     onChange={e => setAttitudes(attitudes.map((x, j) => j === i ? { ...x, comment: e.target.value } : x))}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-slate-500">Tự đánh giá (1-5)</label>
+                      <label className="text-xs text-slate-500">{L("Tự đánh giá", "自己評価")} (1-5)</label>
                       <select value={a.self_score}
                         onChange={e => setAttitudes(attitudes.map((x, j) => j === i ? { ...x, self_score: Number(e.target.value) } : x))}
                         className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? "-- Chọn --" : n}</option>)}
+                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? `-- ${L("Chọn", "選択")} --` : n}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs text-slate-500">Quản lý đánh giá (1-5)</label>
+                      <label className="text-xs text-slate-500">{L("Quản lý đánh giá", "上司評価")} (1-5)</label>
                       <select value={a.mgr_score}
                         onChange={e => setAttitudes(attitudes.map((x, j) => j === i ? { ...x, mgr_score: Number(e.target.value) } : x))}
                         className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? "-- Chọn --" : n}</option>)}
+                        {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? `-- ${L("Chọn", "選択")} --` : n}</option>)}
                       </select>
                     </div>
                   </div>
@@ -322,13 +329,13 @@ export default function NewEvaluationPage() {
           {/* STEP 4 - Nhận xét */}
           {step === 4 && (
             <div className="space-y-5">
-              <h2 className="text-xl font-bold text-slate-900">Nhận xét tổng hợp</h2>
-              <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Người được đánh giá tự ghi</p>
+              <h2 className="text-xl font-bold text-slate-900">{L("Nhận xét tổng hợp", "総合コメント")}</h2>
+              <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">{L("Người được đánh giá tự ghi", "本人記入欄")}</p>
               {[
-                { label: "1. Điểm mạnh có thể phát huy", val: selfStrengths, set: setSelfStrengths },
-                { label: "2. Điểm cần cải thiện và điểm yếu", val: selfImprovements, set: setSelfImprovements },
-                { label: "4. Ý tưởng và đề xuất cải thiện công ty", val: selfIdeas, set: setSelfIdeas },
-                { label: "5. Kỳ vọng và cần hướng dẫn từ cấp trên", val: selfExpectations, set: setSelfExpectations },
+                { label: L("1. Điểm mạnh có thể phát huy", "1. 今後も活かせる強み"), val: selfStrengths, set: setSelfStrengths },
+                { label: L("2. Điểm cần cải thiện và điểm yếu", "2. 改善点・弱み"), val: selfImprovements, set: setSelfImprovements },
+                { label: L("4. Ý tưởng và đề xuất cải thiện công ty", "4. 会社改善のアイデア・提案"), val: selfIdeas, set: setSelfIdeas },
+                { label: L("5. Kỳ vọng và cần hướng dẫn từ cấp trên", "5. 上司への期待・必要なサポート"), val: selfExpectations, set: setSelfExpectations },
               ].map((f, i) => (
                 <div key={i}>
                   <label className="text-sm font-semibold text-slate-700">{f.label}</label>
@@ -337,19 +344,19 @@ export default function NewEvaluationPage() {
                 </div>
               ))}
               <div>
-                <label className="text-sm font-semibold text-slate-700">3. Mức độ hài lòng với công việc (1-5)</label>
+                <label className="text-sm font-semibold text-slate-700">3. {L("Mức độ hài lòng với công việc", "仕事満足度")} (1-5)</label>
                 <select value={selfSatisfaction} onChange={e => setSelfSatisfaction(Number(e.target.value))}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                  {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? "-- Chọn --" : n}</option>)}
+                  {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? `-- ${L("Chọn", "選択")} --` : n}</option>)}
                 </select>
               </div>
 
-              <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mt-4">Cấp trên trực tiếp ghi</p>
+              <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mt-4">{L("Cấp trên trực tiếp ghi", "直属上司記入欄")}</p>
               {[
-                { label: "1. Rủi ro về chất lượng khi phân công nhiệm vụ?", val: mgrRisk, set: setMgrRisk },
-                { label: "2. Có muốn tiếp tục làm việc với thành viên này? (Yes/No + lý do)", val: mgrContinue, set: setMgrContinue },
-                { label: "3. Muốn thành viên này phát triển kỹ năng gì?", val: mgrDevelop, set: setMgrDevelop },
-                { label: "4. Kế hoạch phát triển cho thành viên này", val: mgrPlan, set: setMgrPlan },
+                { label: L("1. Rủi ro về chất lượng khi phân công nhiệm vụ?", "1. 業務を任せる際の品質リスクはありますか？"), val: mgrRisk, set: setMgrRisk },
+                { label: L("2. Có muốn tiếp tục làm việc với thành viên này? (Yes/No + lý do)", "2. 今後もこのメンバーと一緒に働きたいですか？（Yes/No＋理由）"), val: mgrContinue, set: setMgrContinue },
+                { label: L("3. Muốn thành viên này phát triển kỹ năng gì?", "3. 今後伸ばしてほしいスキルは何ですか？"), val: mgrDevelop, set: setMgrDevelop },
+                { label: L("4. Kế hoạch phát triển cho thành viên này", "4. このメンバーの育成計画"), val: mgrPlan, set: setMgrPlan },
               ].map((f, i) => (
                 <div key={i}>
                   <label className="text-sm font-semibold text-slate-700">{f.label}</label>
@@ -364,18 +371,18 @@ export default function NewEvaluationPage() {
           <div className="mt-8 flex justify-between">
             <button onClick={() => step > 0 ? setStep(step - 1) : router.push("/evaluation")}
               className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-              {step === 0 ? "Hủy" : "← Quay lại"}
+              {step === 0 ? L("Hủy", "キャンセル") : L("← Quay lại", "← 戻る")}
             </button>
             {step < STEPS.length - 1 ? (
               <button onClick={() => setStep(step + 1)}
                 disabled={step === 0 && !employeeId}
                 className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-40">
-                Tiếp theo →
+                {L("Tiếp theo →", "次へ →")}
               </button>
             ) : (
               <button onClick={handleSubmit} disabled={saving}
                 className="rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-40">
-                {saving ? "Đang lưu..." : "✓ Lưu đánh giá"}
+                {saving ? L("Đang lưu...", "保存中...") : L("✓ Lưu đánh giá", "✓ 評価を保存")}
               </button>
             )}
           </div>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { useAuthGuard } from "@/lib/useAuthGuard"
 import { ConfettiTrigger } from "@/components/ui/confetti"
 import { useT } from "@/lib/useT"
+import { useLangText } from "@/lib/useLangText"
 import type { Profile } from "@/lib/store"
 
 const categories = [
@@ -51,6 +52,7 @@ type Recipient = {
 export default function PostPage() {
   useAuthGuard()
   const t = useT()
+  const L = useLangText()
   const { profiles, loadProfiles, loadUser, addPost, currentUser, myBudget, companyValues, loadCompanyValues } = useStore()
   const router = useRouter()
 
@@ -124,11 +126,11 @@ export default function PostPage() {
 
   async function handleSubmit() {
     setError("")
-    if (recipients.length === 0) { setError("Vui lòng chọn ít nhất một người nhận"); return }
+    if (recipients.length === 0) { setError(L("Vui lòng chọn ít nhất một người nhận", "少なくとも1名の受取人を選択してください")); return }
     if (!title) { setError(t.post_err_title); return }
     if (!message) { setError(t.post_err_msg); return }
     if (totalPoints > remaining) {
-      setError(`Không đủ ngân sách. Cần ${totalPoints} pts nhưng chỉ còn ${remaining} pts`)
+      setError(L(`Không đủ ngân sách. Cần ${totalPoints} pts nhưng chỉ còn ${remaining} pts`, `予算が不足しています。${totalPoints} pts 必要ですが、残りは ${remaining} pts です`))
       return
     }
     setLoading(true)
@@ -150,7 +152,7 @@ export default function PostPage() {
       }
       setSubmitted(true)
     } catch {
-      setError("Có lỗi xảy ra, vui lòng thử lại")
+      setError(L("Có lỗi xảy ra, vui lòng thử lại", "エラーが発生しました。もう一度お試しください"))
     }
     setLoading(false)
   }
@@ -182,7 +184,7 @@ export default function PostPage() {
             ))}
           </div>
           <p className="mt-3 text-xs text-slate-400">
-            Tổng: <span className="font-bold text-blue-600">{totalPoints} pts</span> đã trao cho {recipients.length} người
+            {L("Tổng", "合計")}: <span className="font-bold text-blue-600">{totalPoints} pts</span> {L(`đã trao cho ${recipients.length} người`, `${recipients.length}名に付与しました`)}
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <button onClick={() => router.push("/feed")} className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700">
@@ -230,7 +232,7 @@ export default function PostPage() {
               </div>
               {recipients.length > 0 && (
                 <div className={"inline-flex rounded-full px-4 py-2 text-sm font-bold ring-1 " + (budgetAfter < 0 ? "bg-red-50 text-red-600 ring-red-100" : "bg-blue-50 text-blue-700 ring-blue-100")}>
-                  Sẽ dùng: {totalPoints} pts → Còn lại: {budgetAfter} pts
+                  {L("Sẽ dùng", "使用予定")}: {totalPoints} pts → {L("Còn lại", "残り")}: {budgetAfter} pts
                 </div>
               )}
             </div>
@@ -244,10 +246,10 @@ export default function PostPage() {
               {/* Recipients */}
               <div>
                 <label className="mb-2 block text-sm font-bold text-slate-700">
-                  Gửi đến
+                  {L("Gửi đến", "送信先")}
                   {recipients.length > 0 && (
                     <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-700">
-                      {recipients.length} người · {totalPoints} pts tổng
+                      {recipients.length} {L("người", "名")} · {L("tổng", "合計")} {totalPoints} pts
                     </span>
                   )}
                 </label>
@@ -282,7 +284,7 @@ export default function PostPage() {
 
                         {/* Point selector row */}
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-slate-400 shrink-0">Điểm trao:</span>
+                          <span className="text-xs text-slate-400 shrink-0">{L("Điểm trao", "付与ポイント")}:</span>
                           <div className="flex flex-wrap gap-1.5">
                             {pointOptions.map(p => {
                               const wouldExceed = (totalPoints - r.points + p) > remaining
@@ -311,10 +313,10 @@ export default function PostPage() {
 
                     {/* Total summary */}
                     <div className={`flex items-center justify-between rounded-2xl px-4 py-2.5 text-sm font-bold ring-1 ${budgetAfter < 0 ? "bg-red-50 text-red-600 ring-red-100" : "bg-emerald-50 text-emerald-700 ring-emerald-100"}`}>
-                      <span>Tổng điểm sẽ trao</span>
+                      <span>{L("Tổng điểm sẽ trao", "付与ポイント合計")}</span>
                       <span>
                         {totalPoints} pts
-                        {budgetAfter >= 0 ? ` · còn lại ${budgetAfter} pts` : ` · ⚠️ vượt ${-budgetAfter} pts`}
+                        {budgetAfter >= 0 ? L(` · còn lại ${budgetAfter} pts`, ` · 残り ${budgetAfter} pts`) : L(` · ⚠️ vượt ${-budgetAfter} pts`, ` · ⚠️ ${-budgetAfter} pts 超過`)}
                       </span>
                     </div>
                   </div>
@@ -329,7 +331,7 @@ export default function PostPage() {
                       value={search}
                       onChange={e => { setSearch(e.target.value); setShowDropdown(true) }}
                       onFocus={() => setShowDropdown(true)}
-                      placeholder="Tìm theo tên, email, phòng ban..."
+                      placeholder={L("Tìm theo tên, email, phòng ban...", "氏名・メール・部署で検索...")}
                       className="flex-1 text-sm outline-none bg-transparent text-slate-900 placeholder:text-slate-400"
                     />
                     {search && (
@@ -340,7 +342,7 @@ export default function PostPage() {
                   {showDropdown && (
                     <div className="absolute z-20 mt-1 w-full rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden max-h-64 overflow-y-auto">
                       {searchResults.length === 0 ? (
-                        <div className="px-4 py-3 text-sm text-slate-400">Không tìm thấy</div>
+                        <div className="px-4 py-3 text-sm text-slate-400">{L("Không tìm thấy", "該当するメンバーが見つかりません")}</div>
                       ) : (
                         searchResults.map(p => {
                           const already = recipients.some(r => r.profile.id === p.id)
@@ -361,8 +363,8 @@ export default function PostPage() {
                                 <div className="text-xs text-slate-500 truncate">{p.office} · {p.department}</div>
                               </div>
                               {already
-                                ? <span className="text-xs text-slate-400 shrink-0">Đã chọn ✔</span>
-                                : <span className="text-xs text-blue-500 shrink-0">+ Thêm</span>
+                                ? <span className="text-xs text-slate-400 shrink-0">{L("Đã chọn ✔", "選択済み ✔")}</span>
+                                : <span className="text-xs text-blue-500 shrink-0">+ {L("Thêm", "追加")}</span>
                               }
                             </button>
                           )
@@ -437,14 +439,14 @@ export default function PostPage() {
                 className="w-full rounded-2xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-blue-700 disabled:opacity-60"
               >
                 {loading
-                  ? "Đang gửi..."
+                  ? L("Đang gửi...", "送信中...")
                   : recipients.length === 0
-                  ? "Chọn người nhận để gửi"
+                  ? L("Chọn người nhận để gửi", "受取人を選択してください")
                   : budgetAfter < 0
-                  ? `⚠️ Vượt ngân sách ${-budgetAfter} pts`
+                  ? L(`⚠️ Vượt ngân sách ${-budgetAfter} pts`, `⚠️ 予算を ${-budgetAfter} pts 超過しています`)
                   : recipients.length === 1
-                  ? `🎉 Gửi ${totalPoints} pts → ${recipients[0].profile.full_name}`
-                  : `🎉 Gửi ${recipients.length} khen thưởng · ${totalPoints} pts tổng`
+                  ? L(`🎉 Gửi ${totalPoints} pts → ${recipients[0].profile.full_name}`, `🎉 ${recipients[0].profile.full_name}さんへ ${totalPoints} pts 送る`)
+                  : L(`🎉 Gửi ${recipients.length} khen thưởng · ${totalPoints} pts tổng`, `🎉 ${recipients.length}名に称賛を送る · 合計 ${totalPoints} pts`)
                 }
               </button>
             </div>
@@ -503,7 +505,7 @@ export default function PostPage() {
                         onClick={() => setExpandedGuideId(expanded ? null : g.label)}
                         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
                       >
-                        <span className="text-sm font-bold">{g.label}</span>
+                        <span className="text-sm font-bold">{L(g.label, ({"Hỗ trợ nhỏ":"小さなサポート","Hỗ trợ lớn":"大きなサポート","Vượt trội":"期待を超える貢献"} as Record<string,string>)[g.label])}</span>
 
                         <span className="ml-auto text-sm font-bold">{g.range}</span>
 
@@ -514,9 +516,9 @@ export default function PostPage() {
 
                       {expanded && (
                         <div className="border-t border-current/10 px-4 pb-4 pt-1">
-                          <p className="text-xs leading-relaxed opacity-80">{g.desc}</p>
+                          <p className="text-xs leading-relaxed opacity-80">{L(g.desc, ({"Hỗ trợ nhỏ":"迅速で小規模なサポート。業務をスムーズに進めるための支援です。","Hỗ trợ lớn":"時間や労力をかけ、進捗や業務品質に明確な影響を与える支援です。","Vượt trội":"通常の役割を超え、顧客・プロジェクト・売上・品質・企業文化に大きく貢献する取り組みです。"} as Record<string,string>)[g.label])}</p>
                           <p className="mt-1.5 text-xs leading-relaxed opacity-60">
-                            <span className="font-semibold">VD:</span> {g.example}
+                            <span className="font-semibold">{L("VD", "例")}:</span> {L(g.example, ({"Hỗ trợ nhỏ":"情報確認、操作案内、資料送付、迅速な連絡サポート","Hỗ trợ lớn":"重要資料のレビュー、締切対応、他チームの課題解決支援","Vượt trội":"重要な締切の救済、大きな課題の解決、再利用可能なツール・プロセスの作成、難易度の高い案件の成功支援"} as Record<string,string>)[g.label])}
                           </p>
                         </div>
                       )}
@@ -543,7 +545,7 @@ export default function PostPage() {
                 <div className="mt-2 text-xs text-slate-400 text-right">{remaining} {t.post_left}</div>
                 {recipients.length > 0 && totalPoints > 0 && budgetAfter >= 0 && (
                   <div className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700 ring-1 ring-amber-100">
-                    Sau khi gửi còn lại: <strong>{budgetAfter} pts</strong>
+                    {L("Sau khi gửi còn lại", "送信後の残り")}: <strong>{budgetAfter} pts</strong>
                   </div>
                 )}
               </div>

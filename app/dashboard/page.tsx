@@ -5,6 +5,7 @@ import { Suspense, useEffect, useRef, useState } from "react"
 import { useAuthGuard } from "@/lib/useAuthGuard"
 import { useCountUp } from "@/lib/useCountUp"
 import { useT } from "@/lib/useT"
+import { useLangText } from "@/lib/useLangText"
 import { supabase } from "@/lib/supabase"
 import { useSearchParams } from "next/navigation"
 type Feedback = {
@@ -73,6 +74,7 @@ function getColor(index: number): string {
 // ─── Feedback Mailbox ──────────────────────────────────────────────────────
 function FeedbackMailbox() {
   const { currentUser } = useStore()
+  const L = useLangText()
 
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
   const [selected, setSelected] = useState<Feedback | null>(null)
@@ -152,25 +154,25 @@ function FeedbackMailbox() {
 
           <div>
             <h2 className="text-base font-bold text-slate-950">
-              Góp ý cải thiện
+              {L("Góp ý cải thiện", "改善フィードバック")}
             </h2>
 
             <p className="text-xs text-slate-400">
-              Ẩn danh — bạn không biết ai đã gửi
+              {L("Ẩn danh — bạn không biết ai đã gửi", "匿名 — 送信者は表示されません")}
             </p>
           </div>
         </div>
 
         {feedbackUnread > 0 && (
           <span className="rounded-full bg-violet-500 px-3 py-1 text-xs font-bold text-white">
-            {feedbackUnread} chưa đọc
+            {feedbackUnread} {L("chưa đọc", "件未読")}
           </span>
         )}
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-16 text-sm text-slate-400">
-          Đang tải góp ý...
+          {L("Đang tải góp ý...", "フィードバックを読み込み中...")}
         </div>
       ) : feedbacks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-slate-400">
@@ -179,7 +181,7 @@ function FeedbackMailbox() {
           </span>
 
           <p className="text-sm">
-            Chưa có góp ý nào
+            {L("Chưa có góp ý nào", "フィードバックはまだありません")}
           </p>
         </div>
       ) : (
@@ -265,7 +267,7 @@ function FeedbackMailbox() {
                   </div>
 
                   <div className="shrink-0 rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-100">
-                    🔒 Ẩn danh
+                    🔒 {L("Ẩn danh", "匿名")}
                   </div>
                 </div>
 
@@ -274,7 +276,7 @@ function FeedbackMailbox() {
                 </div>
 
                 <p className="mt-4 text-xs italic text-slate-400">
-                  * Danh tính người gửi được bảo mật hoàn toàn.
+                  * {L("Danh tính người gửi được bảo mật hoàn toàn.", "送信者の身元は完全に保護されます。")}
                 </p>
               </div>
             ) : (
@@ -284,7 +286,7 @@ function FeedbackMailbox() {
                 </span>
 
                 <p className="text-sm">
-                  Chọn một góp ý để đọc
+                  {L("Chọn một góp ý để đọc", "フィードバックを選択して内容を確認してください")}
                 </p>
               </div>
             )}
@@ -309,6 +311,7 @@ function DashboardPageContent() {
   const [avatarError, setAvatarError] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const t = useT()
+  const L = useLangText()
 
   const [postsReceived, setPostsReceived] = useState<any[]>([])
   const [postsSent, setPostsSent] = useState<any[]>([])
@@ -425,7 +428,7 @@ function DashboardPageContent() {
                   currentUser?.role === "manager" ? "bg-amber-50 text-amber-700 ring-amber-100" :
                   "bg-blue-50 text-blue-700 ring-blue-100"
                 )}>{{
-                  admin: "Admin", hr: "HR", manager: "Quản lý", employee: "Nhân viên",
+                  admin: "Admin", hr: "HR", manager: L("Quản lý", "マネージャー"), employee: L("Nhân viên", "社員"),
                 }[currentUser?.role || "employee"] || currentUser?.role}</span>
                 <span className={"inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 " + badge.color}>{badge.name}</span>
                 {levelInfo && (
@@ -454,7 +457,7 @@ function DashboardPageContent() {
                 : "bg-white/80 text-slate-600 ring-slate-200 hover:bg-slate-50"
             )}
           >
-            📊 Tổng quan
+            📊 {L("Tổng quan", "概要")}
           </button>
           <button
             onClick={() => setActiveTab("feedback")}
@@ -464,7 +467,7 @@ function DashboardPageContent() {
                 : "bg-white/80 text-slate-600 ring-slate-200 hover:bg-violet-50 hover:text-violet-700"
             )}
           >
-            💌 Thư Góp ý
+            💌 {L("Thư Góp ý", "フィードバック")}
             {/* feedbackUnread badge — accessed via store directly */}
             <FeedbackUnreadBadge active={activeTab === "feedback"} />
           </button>
@@ -512,7 +515,7 @@ function DashboardPageContent() {
                   <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 px-3 py-2 text-lg ring-1 ring-blue-100">💰</div>
                   <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">{period.label}</span>
                 </div>
-                <div className="text-sm font-medium text-slate-500">Ngân sách còn lại</div>
+                <div className="text-sm font-medium text-slate-500">{L("Ngân sách còn lại", "残り付与予算")}</div>
                 <div className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
                   {levelInfo.unlimited ? "∞" : animatedBudgetLeft.toLocaleString()}
                   {!levelInfo.unlimited && <span className="text-base font-medium text-slate-400"> / {totalBudget.toLocaleString()}</span>}
@@ -522,41 +525,41 @@ function DashboardPageContent() {
                     <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                       <div className="h-1.5 rounded-full bg-blue-500 transition-[width] duration-1000 ease-out" style={{ width: (barsMounted ? budgetPercent : 0) + "%" }} />
                     </div>
-                    <div className="mt-1.5 text-xs text-slate-400">{budgetUsed} pts đã trao</div>
+                    <div className="mt-1.5 text-xs text-slate-400">{L(`${budgetUsed} pts đã trao`, `${budgetUsed} pts 付与済み`)}</div>
                   </>
                 )}
-                {levelInfo.unlimited && <div className="mt-2 text-xs text-slate-400">Không giới hạn ngân sách</div>}
+                {levelInfo.unlimited && <div className="mt-2 text-xs text-slate-400">{L("Không giới hạn ngân sách", "予算上限なし")}</div>}
               </div>
             </div>
 
             {/* Budget Detail */}
             <div className="animate-fade-in-up mb-8 overflow-hidden rounded-[2rem] border border-white/80 bg-white/80 p-6 shadow-lg backdrop-blur-xl" style={{ animationDelay: "260ms" }}>
-              <h2 className="text-sm font-bold text-slate-950 mb-4">💼 Chi tiết ngân sách — {period.label}</h2>
+              <h2 className="text-sm font-bold text-slate-950 mb-4">💼 {L("Chi tiết ngân sách", "予算詳細")} — {period.label}</h2>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <div className="rounded-2xl bg-slate-50 p-4 text-center">
-                  <div className="text-xs font-medium text-slate-500 mb-1">Ngân sách kỳ này</div>
+                  <div className="text-xs font-medium text-slate-500 mb-1">{L("Ngân sách kỳ này", "今期の予算")}</div>
                   <div className="text-2xl font-bold text-slate-900">{levelInfo.unlimited ? "∞" : baseBudget.toLocaleString()}</div>
                   <div className="text-xs text-slate-400 mt-1">{levelInfo.label}</div>
                 </div>
                 <div className="rounded-2xl bg-emerald-50 p-4 text-center">
-                  <div className="text-xs font-medium text-emerald-700 mb-1">Carry từ kỳ trước</div>
+                  <div className="text-xs font-medium text-emerald-700 mb-1">{L("Carry từ kỳ trước", "前期からの繰越")}</div>
                   <div className="text-2xl font-bold text-emerald-700">+{animatedCarried.toLocaleString()}</div>
-                  <div className="text-xs text-emerald-500 mt-1">Chưa dùng hết → chuyển sang</div>
+                  <div className="text-xs text-emerald-500 mt-1">{L("Chưa dùng hết → chuyển sang", "未使用分 → 次期へ繰越")}</div>
                 </div>
                 <div className="rounded-2xl bg-amber-50 p-4 text-center">
-                  <div className="text-xs font-medium text-amber-700 mb-1">Đã trao</div>
+                  <div className="text-xs font-medium text-amber-700 mb-1">{L("Đã trao", "付与済み")}</div>
                   <div className="text-2xl font-bold text-amber-700">{budgetUsed.toLocaleString()}</div>
-                  <div className="text-xs text-amber-500 mt-1">pts trong kỳ này</div>
+                  <div className="text-xs text-amber-500 mt-1">{L("pts trong kỳ này", "今期の付与ポイント")}</div>
                 </div>
                 <div className="rounded-2xl bg-blue-50 p-4 text-center">
-                  <div className="text-xs font-medium text-blue-700 mb-1">Còn lại</div>
+                  <div className="text-xs font-medium text-blue-700 mb-1">{L("Còn lại", "残り")}</div>
                   <div className="text-2xl font-bold text-blue-700">{levelInfo.unlimited ? "∞" : (totalBudget - budgetUsed).toLocaleString()}</div>
-                  <div className="text-xs text-blue-500 mt-1">pts có thể trao</div>
+                  <div className="text-xs text-blue-500 mt-1">{L("pts có thể trao", "付与可能ポイント")}</div>
                 </div>
               </div>
               {!levelInfo.unlimited && carriedOver > 0 && (
                 <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-xs text-emerald-700">
-                  ✨ Bạn có <strong>{carriedOver} pts</strong> được carry từ kỳ trước. Tổng ngân sách kỳ này: <strong>{totalBudget} pts</strong>.
+                  ✨ {L(`Bạn có ${carriedOver} pts được carry từ kỳ trước. Tổng ngân sách kỳ này: ${totalBudget} pts.`, `前期から ${carriedOver} pts が繰り越されています。今期の総予算は ${totalBudget} pts です。`)}
                 </div>
               )}
             </div>

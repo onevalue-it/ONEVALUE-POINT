@@ -217,7 +217,7 @@ export const ja: T = {
   dash_budget_left:   "残り付与予算",
   dash_pts_given:     "今月の付与ポイント",
   dash_badge:         "バッジ進捗",
-  dash_badge_to:      "ptslで",           // → "{n} pts で {badge} バッジ達成"
+  dash_badge_to:      "ptsで",           // → "{n} pts で {badge} バッジ達成"
   dash_badge_max:     "最高バッジに到達しました！🎉",
   dash_appreciation_received: "受け取った称賛",
   dash_posts_to_you:  "件の投稿があなたへ",

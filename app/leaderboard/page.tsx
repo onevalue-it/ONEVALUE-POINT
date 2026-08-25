@@ -4,6 +4,7 @@ import { useStore } from "@/lib/store"
 import { useEffect, useState, useMemo } from "react"
 import { useAuthGuard } from "@/lib/useAuthGuard"
 import { useT } from "@/lib/useT"
+import { useLangText } from "@/lib/useLangText"
 import { supabase } from "@/lib/supabase"
 
 const badgeColor: Record<string, string> = {
@@ -84,6 +85,7 @@ type OfficeFilter = "All" | "Japan" | "Vietnam"
 export default function LeaderboardPage() {
   useAuthGuard()
   const t = useT()
+  const L = useLangText()
   const { profiles, loadProfiles, posts, loadPosts, currentUser, loadUser } = useStore()
 
   // Filters
@@ -181,10 +183,10 @@ export default function LeaderboardPage() {
 
   // Time label
   const timeLabel = useMemo(() => {
-    if (timeMode === "total") return "Tất cả thời gian"
+    if (timeMode === "total") return L("Tất cả thời gian", "全期間")
     if (timeMode === "month") return monthOptions.find(o => o.value === selectedMonth)?.label || ""
     if (timeMode === "half") return half.label
-    return `Năm ${new Date().getFullYear()}`
+    return L(`Năm ${new Date().getFullYear()}`, `${new Date().getFullYear()}年`)
   }, [timeMode, selectedMonth])
 
   async function handleExportExcel() {
@@ -312,14 +314,14 @@ export default function LeaderboardPage() {
                     disabled={exportingExcel || timeMode !== "month"}
                     title={
                       timeMode !== "month"
-                        ? "Chọn chế độ Theo tháng để xuất Excel"
-                        : "Xuất báo cáo Excel theo tháng đang chọn"
+                        ? L("Chọn chế độ Theo tháng để xuất Excel", "Excel出力には月別モードを選択してください")
+                        : L("Xuất báo cáo Excel theo tháng đang chọn", "選択中の月のExcelレポートを出力")
                     }
                     className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <span>⬇</span>
                     <span>
-                      {exportingExcel ? "Đang xuất..." : "Export Excel"}
+                      {exportingExcel ? L("Đang xuất...", "出力中...") : L("Export Excel", "Excel出力")}
                     </span>
                   </button>
                 )}
@@ -336,18 +338,18 @@ export default function LeaderboardPage() {
 
         {/* ===== BỘ LỌC ===== */}
         <div className="mb-8 rounded-[2rem] border border-white/80 bg-white/80 p-5 shadow-lg backdrop-blur-xl">
-          <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-4">🔍 Bộ lọc</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-4">🔍 {L("Bộ lọc", "絞り込み")}</h3>
           <div className="flex flex-wrap gap-4">
 
             {/* Time mode */}
             <div className="flex-1 min-w-[200px]">
-              <div className="text-xs font-semibold text-slate-500 mb-2">Thời gian</div>
+              <div className="text-xs font-semibold text-slate-500 mb-2">{L("Thời gian", "期間")}</div>
               <div className="flex flex-wrap gap-1.5">
                 {([
-                  { value: "total", label: "Tất cả" },
-                  { value: "month", label: "Theo tháng" },
+                  { value: "total", label: L("Tất cả", "全期間") },
+                  { value: "month", label: L("Theo tháng", "月別") },
                   { value: "half",  label: half.label },
-                  { value: "year",  label: `Năm ${new Date().getFullYear()}` },
+                  { value: "year",  label: L(`Năm ${new Date().getFullYear()}`, `${new Date().getFullYear()}年`) },
                 ] as { value: TimeMode; label: string }[]).map(opt => (
                   <button key={opt.value} onClick={() => setTimeMode(opt.value)}
                     className={"rounded-full px-3 py-1.5 text-xs font-bold transition " + (
@@ -374,7 +376,7 @@ export default function LeaderboardPage() {
 
             {/* Office */}
             <div>
-              <div className="text-xs font-semibold text-slate-500 mb-2">Văn phòng</div>
+              <div className="text-xs font-semibold text-slate-500 mb-2">{L("Văn phòng", "オフィス")}</div>
               <div className="flex gap-1.5">
                 {(["All", "Vietnam", "Japan"] as OfficeFilter[]).map(o => (
                   <button key={o} onClick={() => setFilterOffice(o)}
@@ -383,7 +385,7 @@ export default function LeaderboardPage() {
                         ? "bg-blue-600 text-white"
                         : "bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-700"
                     )}>
-                    {o === "All" ? "Tất cả" : o}
+                    {o === "All" ? L("Tất cả", "すべて") : o}
                   </button>
                 ))}
               </div>
@@ -391,27 +393,27 @@ export default function LeaderboardPage() {
 
             {/* Department */}
             <div>
-              <div className="text-xs font-semibold text-slate-500 mb-2">Phòng ban</div>
+              <div className="text-xs font-semibold text-slate-500 mb-2">{L("Phòng ban", "部署")}</div>
               <select
                 value={filterDept}
                 onChange={e => setFilterDept(e.target.value)}
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 {departments.map(d => (
-                  <option key={d} value={d}>{d === "All" ? "Tất cả phòng ban" : d}</option>
+                  <option key={d} value={d}>{d === "All" ? L("Tất cả phòng ban", "すべての部署") : d}</option>
                 ))}
               </select>
             </div>
 
             {/* Level */}
             <div>
-              <div className="text-xs font-semibold text-slate-500 mb-2">Cấp bậc</div>
+              <div className="text-xs font-semibold text-slate-500 mb-2">{L("Cấp bậc", "役職")}</div>
               <select
                 value={filterLevel}
                 onChange={e => setFilterLevel(e.target.value)}
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
-                <option value="All">Tất cả cấp bậc</option>
+                <option value="All">{L("Tất cả cấp bậc", "すべての役職")}</option>
                 {Object.entries(LEVEL_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
@@ -461,9 +463,9 @@ export default function LeaderboardPage() {
         {/* Full Ranking Table */}
         <section className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white/85 shadow-xl backdrop-blur-xl">
           <div className="border-b border-slate-100 px-6 py-5">
-            <h2 className="text-lg font-bold text-slate-950">Bảng xếp hạng đầy đủ</h2>
+            <h2 className="text-lg font-bold text-slate-950">{L("Bảng xếp hạng đầy đủ", "総合ランキング")}</h2>
             <p className="mt-1 text-sm text-slate-500">
-              {filtered.length} thành viên · {timeLabel}
+              {filtered.length} {L("thành viên", "名")} · {timeLabel}
               {filterOffice !== "All" && ` · ${filterOffice}`}
               {filterDept !== "All" && ` · ${filterDept}`}
               {filterLevel !== "All" && ` · ${LEVEL_LABELS[filterLevel]}`}
@@ -473,15 +475,15 @@ export default function LeaderboardPage() {
           <div className="relative overflow-x-auto">
             <div className="grid min-w-[680px] grid-cols-7 border-b border-slate-100 px-6 py-3 text-xs font-bold uppercase tracking-wide text-slate-400">
               <div>Rank</div>
-              <div className="col-span-2">Nhân viên</div>
-              <div>Văn phòng</div>
-              <div>Cấp bậc</div>
+              <div className="col-span-2">{L("Nhân viên", "メンバー")}</div>
+              <div>{L("Văn phòng", "オフィス")}</div>
+              <div>{L("Cấp bậc", "役職")}</div>
               <div>Badge</div>
-              <div>{timeMode === "total" ? "Tổng pts" : timeLabel}</div>
+              <div>{timeMode === "total" ? L("Tổng pts", "累計pts") : timeLabel}</div>
             </div>
 
             {filtered.length === 0 && (
-              <div className="px-6 py-12 text-center text-sm text-slate-400">Không có dữ liệu</div>
+              <div className="px-6 py-12 text-center text-sm text-slate-400">{L("Không có dữ liệu", "データがありません")}</div>
             )}
 
             {filtered.map((e, index) => {
@@ -516,7 +518,7 @@ export default function LeaderboardPage() {
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-bold text-slate-950">{e.full_name}</span>
-                        {isMe && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">Bạn</span>}
+                        {isMe && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">{L("Bạn", "あなた")}</span>}
                       </div>
                       <div className="text-xs text-slate-500">{e.department}</div>
                     </div>
