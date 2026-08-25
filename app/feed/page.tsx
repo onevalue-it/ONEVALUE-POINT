@@ -33,6 +33,14 @@ const categoryBorder: Record<string, string> = {
 
 const ALL_REACTIONS = ["👏", "🔥", "⭐", "❤️", "💪", "🎨"]
 
+type PostComment = {
+  id: number
+  post_id: number
+  user_id: string
+  content: string
+  created_at: string
+}
+
 const CATEGORY_JA: Record<string, string> = {
   "M&A Support": "M&Aサポート",
   "M&A": "M&A",
@@ -97,27 +105,20 @@ export default function FeedPage() {
   const [editSaving, setEditSaving] = useState(false)
   const [feedStats, setFeedStats] = useState({ totalPosts: 0, totalPts: 0, latestTime: "" })
   const [dbCategoryCounts, setDbCategoryCounts] = useState<Record<string, number>>({})
+  const [commentsByPost, setCommentsByPost] = useState<Record<string, PostComment[]>>({})
+  const [commentOpen, setCommentOpen] = useState<Record<string, boolean>>({})
+  const [commentDraft, setCommentDraft] = useState<Record<string, string>>({})
+  const [commentSubmitting, setCommentSubmitting] = useState<number | null>(null)
+  const [commentDeleting, setCommentDeleting] = useState<number | null>(null)
 
   useEffect(() => {
-    // Fetch real aggregate stats from DB (not limited to paginated posts).
-    // NOTE: posts has `created_at`, not `time`; selecting the old non-existent
-    // `time` column made Supabase return an error and kept this sidebar at 0.
+    // Fetch aggregate stats once on mount. Keep the dependency array stable so
+    // React Fast Refresh never sees this hook change from [] to [posts.length].
     supabase.from("posts").select("points, category, created_at", { count: "exact" })
       .order("created_at", { ascending: false })
       .then(({ data, count, error }) => {
         if (error) {
-          // Safe fallback to the already-loaded feed so the sidebar never stays blank.
-          const totalPts = posts.reduce((a, p) => a + (p.points || 0), 0)
-          const cats: Record<string, number> = {}
-          for (const p of posts) {
-            if (p.category) cats[p.category] = (cats[p.category] || 0) + 1
-          }
-          setFeedStats({
-            totalPosts: posts.length,
-            totalPts,
-            latestTime: posts[0]?.time || "-",
-          })
-          setDbCategoryCounts(cats)
+          console.error("Failed to load feed aggregate stats:", error)
           return
         }
 
@@ -143,7 +144,8 @@ export default function FeedPage() {
         }
         setDbCategoryCounts(cats)
       })
-  }, [posts.length])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     Promise.all([loadUser(), loadProfiles(), loadPosts(true), loadMyReactions()]).finally(() => setIsLoading(false))
@@ -151,6 +153,96 @@ export default function FeedPage() {
     return () => unsubscribeRealtime()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const postIdsKey = posts.map(p => p.id).join(",")
+
+  useEffect(() => {
+    if (!postIdsKey) {
+      setCommentsByPost({})
+      return
+    }
+
+    const postIds = postIdsKey.split(",").map(Number).filter(Boolean)
+    supabase
+      .from("post_comments")
+      .select("id, post_id, user_id, content, created_at")
+      .in("post_id", postIds)
+      .order("created_at", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          // This usually means the SQL migration for post_comments has not been run yet.
+          console.error("Failed to load comments:", error)
+          return
+        }
+        const grouped: Record<string, PostComment[]> = {}
+        for (const row of (data || []) as PostComment[]) {
+          const key = String(row.post_id)
+          if (!grouped[key]) grouped[key] = []
+          grouped[key].push(row)
+        }
+        setCommentsByPost(grouped)
+      })
+  }, [postIdsKey])
+
+  async function handleAddComment(postId: number) {
+    const content = (commentDraft[String(postId)] || "").trim()
+    if (!content) return
+    if (content.length > 1000) {
+      setToast(L("Bình luận tối đa 1000 ký tự.", "コメントは1000文字以内で入力してください。"))
+      setTimeout(() => setToast(""), 2500)
+      return
+    }
+
+    // RLS must be checked against Supabase Auth, not a cached profile object.
+    const { data: authData, error: authError } = await supabase.auth.getUser()
+    const authUser = authData?.user
+    if (authError || !authUser) {
+      console.error("Cannot resolve authenticated user before commenting:", authError)
+      setToast(L("Phiên đăng nhập không hợp lệ. Hãy đăng nhập lại.", "ログインセッションが無効です。再ログインしてください。"))
+      setTimeout(() => setToast(""), 3500)
+      return
+    }
+
+    setCommentSubmitting(postId)
+    const { data, error } = await supabase
+      .from("post_comments")
+      .insert({ post_id: postId, user_id: authUser.id, content })
+      .select("id, post_id, user_id, content, created_at")
+      .single()
+    setCommentSubmitting(null)
+
+    if (error || !data) {
+      console.error("Failed to add comment:", error)
+      const detail = error?.message || error?.details || error?.hint || "Unknown database error"
+      setToast(L(`Không thể gửi bình luận: ${detail}`, `コメントを送信できません: ${detail}`))
+      setTimeout(() => setToast(""), 6000)
+      return
+    }
+
+    const key = String(postId)
+    setCommentsByPost(prev => ({ ...prev, [key]: [...(prev[key] || []), data as PostComment] }))
+    setCommentDraft(prev => ({ ...prev, [key]: "" }))
+  }
+
+  async function handleDeleteComment(comment: PostComment) {
+    const { data: authData } = await supabase.auth.getUser()
+    const authUser = authData?.user
+    if (!authUser || comment.user_id !== authUser.id) return
+    setCommentDeleting(comment.id)
+    const { error } = await supabase.from("post_comments").delete().eq("id", comment.id)
+    setCommentDeleting(null)
+    if (error) {
+      console.error("Failed to delete comment:", error)
+      setToast(L("Không thể xóa bình luận.", "コメントを削除できません。"))
+      setTimeout(() => setToast(""), 2500)
+      return
+    }
+    const key = String(comment.post_id)
+    setCommentsByPost(prev => ({
+      ...prev,
+      [key]: (prev[key] || []).filter(c => c.id !== comment.id),
+    }))
+  }
 
   function handleReact(postId: number, emoji: string) {
     const key = String(postId)
@@ -175,8 +267,26 @@ export default function FeedPage() {
     .slice(0, 3)
     .map(p => [p.full_name, { points: p.monthly_points, office: p.office }] as const)
 
+  // Render-time fallback: while aggregate stats are loading (or if the aggregate
+  // query fails), use the posts already loaded by the feed store without adding
+  // another effect dependency on posts.length.
+  const fallbackCategoryCounts: Record<string, number> = {}
+  for (const p of posts) {
+    if (p.category) fallbackCategoryCounts[p.category] = (fallbackCategoryCounts[p.category] || 0) + 1
+  }
+  const effectiveCategoryCounts = Object.keys(dbCategoryCounts).length > 0
+    ? dbCategoryCounts
+    : fallbackCategoryCounts
+  const effectiveFeedStats = feedStats.totalPosts > 0 || posts.length === 0
+    ? feedStats
+    : {
+        totalPosts: posts.length,
+        totalPts: posts.reduce((sum, p) => sum + (p.points || 0), 0),
+        latestTime: posts[0]?.time || "-",
+      }
+
   // Sidebar: category breakdown (from DB — full data, not paginated)
-  const topCategories = Object.entries(dbCategoryCounts)
+  const topCategories = Object.entries(effectiveCategoryCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
   const maxCount = topCategories[0]?.[1] || 1
@@ -281,7 +391,7 @@ export default function FeedPage() {
                     : "bg-white text-slate-600 ring-slate-200 hover:bg-blue-50 hover:text-blue-700"
                 )}
               >
-                {L(cat, CATEGORY_JA[cat] || cat)} ({dbCategoryCounts[cat] || 0})
+                {L(cat, CATEGORY_JA[cat] || cat)} ({effectiveCategoryCounts[cat] || 0})
               </button>
             ))}
           </div>
@@ -314,6 +424,8 @@ export default function FeedPage() {
 
             {filteredPosts.map((p) => {
               const myR = myReactions[String(p.id)] || []
+              const comments = commentsByPost[String(p.id)] || []
+              const isCommentsOpen = !!commentOpen[String(p.id)]
               const isForMe = p.to === currentUser?.full_name
               const toInitials = p.to.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
               const fromAvatarUrl = getProfileAvatar(p.from)
@@ -502,7 +614,89 @@ export default function FeedPage() {
                           </div>
                         )}
                       </div>
+                      <button
+                        onClick={() => setCommentOpen(prev => ({ ...prev, [String(p.id)]: !prev[String(p.id)] }))}
+                        className="flex items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500 ring-1 ring-slate-200 transition hover:bg-white hover:text-blue-700 hover:ring-blue-200"
+                      >
+                        <span>💬</span>
+                        <span>{L("Bình luận", "コメント")}</span>
+                        {comments.length > 0 && <span className="font-bold text-blue-600">{comments.length}</span>}
+                      </button>
                     </div>
+
+                    {isCommentsOpen && (
+                      <div className="mt-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                        <div className="space-y-3">
+                          {comments.length === 0 && (
+                            <p className="py-1 text-center text-xs text-slate-400">
+                              {L("Chưa có bình luận. Hãy bắt đầu cuộc trò chuyện.", "まだコメントはありません。最初のコメントを投稿しましょう。")}
+                            </p>
+                          )}
+                          {comments.map(comment => {
+                            const author = profiles.find(profile => profile.id === comment.user_id)
+                            const authorName = author?.full_name || L("Thành viên", "メンバー")
+                            const authorAvatar = author?.avatar
+                            return (
+                              <div key={comment.id} className="flex gap-2.5">
+                                {authorAvatar ? (
+                                  <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white ring-1 ring-slate-200">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={authorAvatar} alt={authorName} className="h-full w-full object-cover" />
+                                  </div>
+                                ) : (
+                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-[10px] font-bold text-white">
+                                    {getInitials(authorName)}
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1 rounded-2xl bg-white px-3 py-2 ring-1 ring-slate-100">
+                                  <div className="flex items-center gap-2">
+                                    <span className="truncate text-xs font-bold text-slate-800">{authorName}</span>
+                                    <span className="text-[10px] text-slate-400">
+                                      {new Date(comment.created_at).toLocaleString(L("vi-VN", "ja-JP"), { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                                    </span>
+                                    {comment.user_id === currentUser?.id && (
+                                      <button
+                                        onClick={() => handleDeleteComment(comment)}
+                                        disabled={commentDeleting === comment.id}
+                                        className="ml-auto text-[10px] font-semibold text-slate-400 hover:text-red-500 disabled:opacity-50"
+                                      >
+                                        {commentDeleting === comment.id ? L("Đang xóa...", "削除中...") : L("Xóa", "削除")}
+                                      </button>
+                                    )}
+                                  </div>
+                                  <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-5 text-slate-600">{comment.content}</p>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        <div className="mt-3 flex items-end gap-2 border-t border-slate-100 pt-3">
+                          <textarea
+                            value={commentDraft[String(p.id)] || ""}
+                            onChange={e => setCommentDraft(prev => ({ ...prev, [String(p.id)]: e.target.value }))}
+                            onKeyDown={e => {
+                              if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                                e.preventDefault()
+                                handleAddComment(p.id)
+                              }
+                            }}
+                            rows={2}
+                            maxLength={1000}
+                            placeholder={L("Viết bình luận...", "コメントを入力...")}
+                            className="min-h-10 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                          />
+                          <button
+                            onClick={() => handleAddComment(p.id)}
+                            disabled={commentSubmitting === p.id || !(commentDraft[String(p.id)] || "").trim()}
+                            className="shrink-0 rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            {commentSubmitting === p.id ? L("Đang gửi...", "送信中...") : L("Gửi", "送信")}
+                          </button>
+                        </div>
+                        <p className="mt-1.5 text-right text-[10px] text-slate-400">Ctrl/⌘ + Enter</p>
+                      </div>
+                    )}
                   </div>
                 </article>
               )
@@ -543,15 +737,15 @@ export default function FeedPage() {
               <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100">
                   <span className="text-sm font-semibold text-blue-700">{t.feed_total_posts}</span>
-                  <span className="text-lg font-bold text-blue-700">{feedStats.totalPosts}</span>
+                  <span className="text-lg font-bold text-blue-700">{effectiveFeedStats.totalPosts}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-2xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-100">
                   <span className="text-sm font-semibold text-emerald-700">{t.feed_pts_given}</span>
-                  <span className="text-lg font-bold text-emerald-700">{feedStats.totalPts}</span>
+                  <span className="text-lg font-bold text-emerald-700">{effectiveFeedStats.totalPts}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-2xl bg-amber-50 px-4 py-3 ring-1 ring-amber-100">
                   <span className="text-sm font-semibold text-amber-700">{t.feed_latest}</span>
-                  <span className="text-sm font-bold text-amber-700">{feedStats.latestTime}</span>
+                  <span className="text-sm font-bold text-amber-700">{effectiveFeedStats.latestTime}</span>
                 </div>
               </div>
             </div>
