@@ -6,7 +6,6 @@ import { useAuthGuard } from "@/lib/useAuthGuard"
 import { useT } from "@/lib/useT"
 import { useLangText } from "@/lib/useLangText"
 import { supabase } from "@/lib/supabase"
-import { useSearchParams } from "next/navigation"
 import type { Post } from "@/lib/store"
 
 const categoryColor: Record<string, string> = {
@@ -103,8 +102,7 @@ export default function FeedPage() {
   useAuthGuard()
   const t = useT()
   const L = useLangText()
-  const searchParams = useSearchParams()
-  const targetPostId = Number(searchParams.get("post") || 0)
+  const [targetPostId, setTargetPostId] = useState(0)
   const {
     posts, profiles, currentUser, addReaction, removeReaction,
     deletePost, editPost,
@@ -144,6 +142,13 @@ export default function FeedPage() {
   const [targetPost, setTargetPost] = useState<Post | null>(null)
   const [targetPostLoading, setTargetPostLoading] = useState(false)
   const [highlightPostId, setHighlightPostId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const postId = Number(params.get("post") || 0)
+    setTargetPostId(Number.isFinite(postId) ? postId : 0)
+  }, [])
 
   useEffect(() => {
     // Fetch aggregate stats once on mount. Keep the dependency array stable so
