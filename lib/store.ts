@@ -171,9 +171,13 @@ export const useStore = create<Store>()((set, get) => ({
       .single()
 
     if (profile) {
+      const baseBudget = Number(profile.giving_budget_monthly || 0)
+      const carriedBudget = Number(profile.budget_carried || 0)
+
       set({
         currentUser: profile,
         isLoggedIn: true,
+        myBudget: baseBudget + carriedBudget,
       })
       // Load notifications and reactions in background
       get().loadNotifications()
@@ -383,7 +387,7 @@ export const useStore = create<Store>()((set, get) => ({
     if (data) set({ companyValues: data })
   },
 
-  myBudget: 300,
+  myBudget: 0,
 
   // ─── Notifications ────────────────────────────────────────────────────────
   notifications: [],
