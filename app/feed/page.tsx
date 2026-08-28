@@ -6,6 +6,8 @@ import { useAuthGuard } from "@/lib/useAuthGuard"
 import { useT } from "@/lib/useT"
 import { useLangText } from "@/lib/useLangText"
 import { supabase } from "@/lib/supabase"
+import { useSearchParams } from "next/navigation"
+import type { Post } from "@/lib/store"
 
 const categoryColor: Record<string, string> = {
   "M&A Support":    "bg-blue-50 text-blue-700 ring-blue-100",
@@ -70,10 +72,39 @@ function getInitials(name: string): string {
   return name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
 }
 
+
+function dbRowToTargetPost(row: any): Post {
+  const created = row.created_at ? new Date(row.created_at) : new Date()
+  const diff = Math.max(0, Math.floor((Date.now() - created.getTime()) / 1000))
+  let time = "Just now"
+  if (diff >= 86400) time = Math.floor(diff / 86400) + " days ago"
+  else if (diff >= 3600) time = Math.floor(diff / 3600) + " hours ago"
+  else if (diff >= 60) time = Math.floor(diff / 60) + " min ago"
+
+  return {
+    id: row.id,
+    from: row.from_name || "",
+    fromOffice: row.from_office || "",
+    fromAvatar: row.from_avatar || getInitials(row.from_name || ""),
+    fromColor: "from-blue-500 to-cyan-500",
+    to: row.to_name || "",
+    toOffice: row.to_office || "",
+    points: Number(row.points || 0),
+    category: row.category || "",
+    companyValueId: row.company_value_id || undefined,
+    time,
+    title: row.title || "",
+    message: row.message || "",
+    reactions: row.reactions || {},
+  }
+}
+
 export default function FeedPage() {
   useAuthGuard()
   const t = useT()
   const L = useLangText()
+  const searchParams = useSearchParams()
+  const targetPostId = Number(searchParams.get("post") || 0)
   const {
     posts, profiles, currentUser, addReaction, removeReaction,
     deletePost, editPost,
@@ -110,6 +141,9 @@ export default function FeedPage() {
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({})
   const [commentSubmitting, setCommentSubmitting] = useState<number | null>(null)
   const [commentDeleting, setCommentDeleting] = useState<number | null>(null)
+  const [targetPost, setTargetPost] = useState<Post | null>(null)
+  const [targetPostLoading, setTargetPostLoading] = useState(false)
+  const [highlightPostId, setHighlightPostId] = useState<number | null>(null)
 
   useEffect(() => {
     // Fetch aggregate stats once on mount. Keep the dependency array stable so
@@ -154,7 +188,83 @@ export default function FeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const postIdsKey = posts.map(p => p.id).join(",")
+  useEffect(() => {
+    if (!targetPostId) {
+      setTargetPost(null)
+      setHighlightPostId(null)
+      return
+    }
+
+    // Ensure a notification deep-link is never hidden by a category filter.
+    setFilterCategory("")
+
+    const alreadyLoaded = posts.some(p => p.id === targetPostId)
+    if (alreadyLoaded) {
+      setTargetPost(null)
+      setHighlightPostId(targetPostId)
+      return
+    }
+
+    let cancelled = false
+
+    async function loadTargetPost() {
+      setTargetPostLoading(true)
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("id", targetPostId)
+        .single()
+
+      if (cancelled) return
+
+      setTargetPostLoading(false)
+
+      if (error || !data) {
+        console.error("Failed to load notification target post:", error)
+        setToast(L("Không tìm thấy bài khen thưởng này.", "この称賛投稿が見つかりません。"))
+        setTimeout(() => setToast(""), 3000)
+        return
+      }
+
+      setTargetPost(dbRowToTargetPost(data))
+      setHighlightPostId(targetPostId)
+    }
+
+    loadTargetPost()
+
+    return () => {
+      cancelled = true
+    }
+    // We intentionally react to target id and loaded post ids only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetPostId, posts.map(p => p.id).join(",")])
+
+  const displayPosts = targetPost && !posts.some(p => p.id === targetPost.id)
+    ? [targetPost, ...posts]
+    : posts
+
+  useEffect(() => {
+    if (!targetPostId || !displayPosts.some(p => p.id === targetPostId)) return
+
+    const timer = window.setTimeout(() => {
+      const el = document.getElementById(`post-${targetPostId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" })
+        setHighlightPostId(targetPostId)
+      }
+    }, 120)
+
+    const clearHighlight = window.setTimeout(() => {
+      setHighlightPostId(current => current === targetPostId ? null : current)
+    }, 4500)
+
+    return () => {
+      window.clearTimeout(timer)
+      window.clearTimeout(clearHighlight)
+    }
+  }, [targetPostId, displayPosts.length])
+
+  const postIdsKey = displayPosts.map(p => p.id).join(",")
 
   useEffect(() => {
     if (!postIdsKey) {
@@ -292,10 +402,10 @@ export default function FeedPage() {
   const maxCount = topCategories[0]?.[1] || 1
 
   // All unique categories for filter bar (from paginated posts for the filter UI)
-  const allCategories = Array.from(new Set(posts.map(p => p.category))).filter(Boolean).sort()
+  const allCategories = Array.from(new Set(displayPosts.map(p => p.category))).filter(Boolean).sort()
 
   // Filtered posts
-  const filteredPosts = filterCategory ? posts.filter(p => p.category === filterCategory) : posts
+  const filteredPosts = filterCategory ? displayPosts.filter(p => p.category === filterCategory) : displayPosts
 
   if (isLoading) {
     return (
@@ -407,6 +517,13 @@ export default function FeedPage() {
           </button>
         )}
 
+        {targetPostLoading && (
+          <div className="mb-4 flex items-center justify-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 ring-1 ring-amber-200">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-200 border-t-amber-600" />
+            {L("Đang mở bài khen thưởng từ thông báo...", "通知の称賛投稿を開いています...")}
+          </div>
+        )}
+
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Posts list */}
           <div className="space-y-5">
@@ -438,7 +555,12 @@ export default function FeedPage() {
                 <article
                   key={p.id}
                   id={`post-${p.id}`}
-                  className={"animate-fade-in-up relative rounded-[2rem] border-l-4 border border-white/80 bg-white/90 shadow-xl backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-2xl " + (categoryBorder[p.category] || "border-l-slate-300") + (isForMe ? " ring-2 ring-blue-200 shadow-blue-100/60" : "")}
+                  className={
+                    "animate-fade-in-up relative rounded-[2rem] border-l-4 border border-white/80 bg-white/90 shadow-xl backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-2xl " +
+                    (categoryBorder[p.category] || "border-l-slate-300") +
+                    (isForMe ? " ring-2 ring-blue-200 shadow-blue-100/60" : "") +
+                    (highlightPostId === p.id ? " ring-4 ring-amber-300 shadow-amber-200/70" : "")
+                  }
                   style={{ animationDelay: `${filteredPosts.indexOf(p) * 60}ms` }}
                 >
                   {/* Background blob — wrapped to avoid leaking outside card */}

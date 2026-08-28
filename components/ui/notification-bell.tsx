@@ -142,7 +142,7 @@ export function NotificationBell() {
                     href={
                      isFeedback
                         ? `/dashboard?tab=feedback&feedbackId=${n.feedback_id || ""}`
-                         : `/feed#post-${n.post_id}`
+                         : `/feed?post=${n.post_id}`
                               }
                     onClick={() => { markRead(n.id); setOpen(false) }}
                     className={"flex items-start gap-3 px-4 py-3 transition hover:bg-slate-50 border-b border-slate-50 last:border-0 " + (!n.is_read ? "bg-blue-50/60" : "")}
