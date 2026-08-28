@@ -13,7 +13,7 @@ const categories = [
   "M&A", "Market Research", "Fast Support", "Translation",
   "Leadership", "Creativity", "Sales Support", "Operations"
 ]
-const pointOptions = [10, 20, 30, 50, 100]
+const pointOptions = [5, 10, 15, 20]
 
 const CATEGORY_JA: Record<string, string> = {
   "M&A": "M&A",
@@ -57,21 +57,21 @@ const COMPANY_VALUE_JA: Record<string, { title: string; description: string }> =
 const POINT_GUIDE = [
   {
     label: "Hỗ trợ nhỏ",
-    range: "10–20 pts",
+    range: "5–10 pts",
     color: "bg-blue-50 text-blue-700 ring-blue-100",
     desc: "Hỗ trợ nhanh, phạm vi nhỏ, giúp công việc thuận lợi hơn.",
     example: "Check giúp thông tin, hướng dẫn thao tác, gửi tài liệu, hỗ trợ liên hệ nhanh",
   },
   {
     label: "Hỗ trợ lớn",
-    range: "30–50 pts",
+    range: "15 pts",
     color: "bg-emerald-50 text-emerald-700 ring-emerald-100",
     desc: "Hỗ trợ có đầu tư thời gian/công sức, ảnh hưởng rõ đến tiến độ hoặc chất lượng công việc.",
     example: "Review tài liệu quan trọng, hỗ trợ xử lý deadline, tham gia gỡ vướng cho team khác",
   },
   {
     label: "Vượt trội",
-    range: "100 pts",
+    range: "20 pts",
     color: "bg-amber-50 text-amber-700 ring-amber-100",
     desc: "Đóng góp vượt ngoài phạm vi thông thường, có tác động lớn đến khách hàng, dự án, doanh thu, chất lượng hoặc văn hóa công ty.",
     example: "Cứu deadline quan trọng, xử lý issue lớn, tạo tool/quy trình dùng lại được, hỗ trợ thành công một case khó",
@@ -144,7 +144,7 @@ export default function PostPage() {
 
   function addRecipient(p: Profile) {
     if (!recipients.find(r => r.profile.id === p.id)) {
-      setRecipients(prev => [...prev, { profile: p, points: 30 }])
+      setRecipients(prev => [...prev, { profile: p, points: 10 }])
     }
     setSearch("")
     setShowDropdown(false)
