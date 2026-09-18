@@ -23,8 +23,22 @@ export default function LoginPage() {
     if (!email) { setError(t.login_err_email); return }
     if (!password) { setError(t.login_err_pw); return }
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { setError(t.login_err_bad); setLoading(false); return }
+    const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error || !signInData.user) { setError(t.login_err_bad); setLoading(false); return }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id, is_active, deleted_at")
+      .eq("id", signInData.user.id)
+      .maybeSingle()
+
+    if (!profile || profile.is_active === false || profile.deleted_at) {
+      await supabase.auth.signOut()
+      setError("Tài khoản đã bị vô hiệu hóa hoặc đã xóa")
+      setLoading(false)
+      return
+    }
+
     router.push("/dashboard")
   }
 

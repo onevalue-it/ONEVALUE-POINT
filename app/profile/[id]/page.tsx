@@ -115,6 +115,8 @@ export default function ProfilePage() {
       .from("profiles")
       .select("*")
       .eq("id", id)
+      .eq("is_active", true)
+      .is("deleted_at", null)
       .maybeSingle()
 
     if (byId.data) {
@@ -127,6 +129,8 @@ export default function ProfilePage() {
         .from("profiles")
         .select("*")
         .eq("user_id", id)
+        .eq("is_active", true)
+        .is("deleted_at", null)
         .maybeSingle()
 
       if (byUserId.data) {

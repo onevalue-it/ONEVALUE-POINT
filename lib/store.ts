@@ -33,6 +33,7 @@ export type Profile = {
   level?: string
   manager_id?: string
   is_active?: boolean
+  deleted_at?: string | null
   points: number
   monthly_points: number
   budget_used: number
@@ -168,7 +169,9 @@ export const useStore = create<Store>()((set, get) => ({
       .from("profiles")
       .select("*")
       .eq("id", user.id)
-      .single()
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .maybeSingle()
 
     if (profile) {
       const baseBudget = Number(profile.giving_budget_monthly || 0)
@@ -182,7 +185,12 @@ export const useStore = create<Store>()((set, get) => ({
       // Load notifications and reactions in background
       get().loadNotifications()
       get().loadMyReactions()
+      return
     }
+
+    // Profile đã bị soft-delete/vô hiệu hóa: đóng phiên phía client.
+    await supabase.auth.signOut()
+    set({ currentUser: null, isLoggedIn: false, myBudget: 0 })
   },
 
   logout: async () => {
@@ -197,6 +205,8 @@ export const useStore = create<Store>()((set, get) => ({
     const { data } = await supabase
       .from("profiles")
       .select("*")
+      .eq("is_active", true)
+      .is("deleted_at", null)
       .order("points", { ascending: false })
 
     if (data) set({ profiles: data })

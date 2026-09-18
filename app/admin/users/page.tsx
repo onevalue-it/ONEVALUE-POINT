@@ -134,6 +134,7 @@ export default function AdminUsersPage() {
     const { data } = await supabase
       .from("profiles")
       .select("*")
+      .is("deleted_at", null)
       .order("full_name", { ascending: true })
     if (data) setProfiles(data as Profile[])
     setLoading(false)
